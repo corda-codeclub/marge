@@ -3,17 +3,20 @@ package com.template
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import java.util.*
 
 /**
  * A patient
  */
+@CordaSerializable
 data class Patient(val name: String, val id: String)
 
 /**
  * A request to process a claim
  */
+@CordaSerializable
 data class ClaimRequest(val insurer: Party,
                         val amount: Amount<Currency>,
                         val patient: Patient,
