@@ -20,6 +20,7 @@ import java.security.PublicKey
  */
 @StartableByRPC
 @StartableByService
+@InitiatingFlow
 class RaiseClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedTransaction>() {
 
   @Suspendable
