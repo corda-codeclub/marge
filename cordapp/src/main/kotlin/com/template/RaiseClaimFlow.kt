@@ -15,9 +15,12 @@ import java.security.PublicKey
 // this example uses slighly more lower-level APIs with flow session and send/receive invocations
 // to build up the transaction and get it mutually signed
 
+/**
+ * This is run by the Hospital
+ */
 @StartableByRPC
 @StartableByService
-class SubmitClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedTransaction>() {
+class RaiseClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedTransaction>() {
 
   @Suspendable
   override fun call(): SignedTransaction {
@@ -31,11 +34,11 @@ class SubmitClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<Signed
 
   @Suspendable
   private fun createTransactionSignAndCommit(claimState: ClaimState, session: FlowSession) : SignedTransaction {
-    val notary = serviceHub.networkMapCache.notaryIdentities.first()
-    val txb = TransactionBuilder(notary)
-    txb.addCommand(ClaimCommand.ClaimRequestCommand())
-    txb.addOutputState(claimState, ClaimContract.CONTRACT_ID, notary)
-    val stx = serviceHub.signInitialTransaction(txb)
+    val notary = serviceHub.networkMapCache.notaryIdentities.first() // get notary that we to use - NB this is hacky but it gets us going
+    val txb = TransactionBuilder(notary) // hospital constructs the transactions
+    txb.addCommand(ClaimCommand.ClaimRequestCommand()) // what type of transaction is this
+    txb.addOutputState(claimState, ClaimContract.CONTRACT_ID, notary) // add the claim as the only output state of this transaction, ref the contract that will verify this transaction anytime in the future e.g. by notary
+    val stx = serviceHub.signInitialTransaction(txb) // hospital signs the transaction
     session.send(stx)
     val signatures = session.receive<List<TransactionSignature>>().unwrap { it }
     val fullySigned = stx + signatures
@@ -56,18 +59,25 @@ class SubmitClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<Signed
 
 
 /**
- * This class handles the insurers side of the flow and initiated by [SubmitClaimFlow]
+ * This class handles the insurers side of the flow and initiated by [RaiseClaimFlow]
  */
-@InitiatedBy(SubmitClaimFlow::class)
+@InitiatedBy(RaiseClaimFlow::class)
 class VerifyClaimFlow(private val session: FlowSession) : FlowLogic<SignedTransaction>() {
   @Suspendable
   override fun call(): SignedTransaction {
+    // who is the hospital?
     val hospital = session.counterparty
+
     val claim = receiveClaimRequest()
+
     val claimState = calculateCompensation(hospital, claim)
+
     sendClaimState(claimState)
+
     val stx = receiveSignedTransaction()
     verifySignedTransaction(stx)
+
+    // now sign it
     val signingKeys = session.receive<List<PublicKey>>().unwrap { keys ->
       serviceHub.keyManagementService.filterMyKeys(keys)
     }
