@@ -1,27 +1,26 @@
 package com.template
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
-import java.security.PublicKey
-
-// PLEASE NOTE: we could have used the CollectSignatures flow that is a frequently used flow for simple cases
-// however, to give you a flavour of how Corda can be used to implement complex multi-party protocols
-// this example uses slighly more lower-level APIs with flow session and send/receive invocations
-// to build up the transaction and get it mutually signed
 
 /**
- * This is run by the Hospital
+ * This is run by the Hospital when raising a claim
  */
 @StartableByRPC
 @StartableByService
 @InitiatingFlow
 class RaiseClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedTransaction>() {
+
+  companion object {
+    private val log = loggerFor<RaiseClaimFlow>()
+  }
 
   @Suspendable
   override fun call(): SignedTransaction {
@@ -35,26 +34,37 @@ class RaiseClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedT
 
   @Suspendable
   private fun createTransactionSignAndCommit(claimState: ClaimState, session: FlowSession) : SignedTransaction {
-    val notary = serviceHub.networkMapCache.notaryIdentities.first() // get notary that we to use - NB this is hacky but it gets us going
-    val txb = TransactionBuilder(notary) // hospital constructs the transactions
-    txb.addCommand(ClaimCommand.ClaimRequestCommand()) // what type of transaction is this
-    txb.addOutputState(claimState, ClaimContract.CONTRACT_ID, notary) // add the claim as the only output state of this transaction, ref the contract that will verify this transaction anytime in the future e.g. by notary
+    log.info("selecting notary from the first available in the network") // for real system, we should be more prescriptive
+    val notary = serviceHub.networkMapCache.notaryIdentities.first()
+    // hospital constructs the transactions
+    val txb = TransactionBuilder(notary)
+    // what type of transaction is this and who should be signing it
+    txb.addCommand(Command(ClaimCommand.ClaimRequestCommand(), listOf(claimRequest.insurer.owningKey, ourIdentity.owningKey) ))
+    // add the claim as the only output state of this transaction, ref the contract that will verify this transaction anytime in the future e.g. by notary
+    txb.addOutputState(claimState, ClaimContract.CONTRACT_ID, notary)
+    log.info("signing transaction")
     val stx = serviceHub.signInitialTransaction(txb) // hospital signs the transaction
-    session.send(stx)
-    val signatures = session.receive<List<TransactionSignature>>().unwrap { it }
-    val fullySigned = stx + signatures
-    subFlow(FinalityFlow(fullySigned))
-    return fullySigned
+    log.info("awaiting signature collection from all sides")
+    val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session), CollectSignaturesFlow.tracker()))
+    log.info("initiating notarisation and awaiting successful result")
+    val result = subFlow(FinalityFlow(fullySignedTransaction))
+    log.info("transaction fully notarised and committed")
+    return result
   }
 
   @Suspendable
   private fun receiveClaimState(session: FlowSession): ClaimState {
-    return session.receive<ClaimState>().unwrap { it }
+    log.info("awaiting return of ClaimState")
+    val claimState = session.receive<ClaimState>().unwrap { it }
+    log.info("received ClaimState")
+    return claimState
   }
 
   @Suspendable
   private fun sendClaim(session: FlowSession) {
+    log.info("sending claim request $claimRequest")
     session.send(claimRequest)
+    log.info("claim request sent $claimRequest")
   }
 }
 
@@ -64,46 +74,39 @@ class RaiseClaimFlow(private val claimRequest: ClaimRequest) : FlowLogic<SignedT
  */
 @InitiatedBy(RaiseClaimFlow::class)
 class VerifyClaimFlow(private val session: FlowSession) : FlowLogic<SignedTransaction>() {
+  companion object {
+    private val log = loggerFor<RaiseClaimFlow>()
+  }
+
   @Suspendable
   override fun call(): SignedTransaction {
-    // who is the hospital?
     val hospital = session.counterparty
-
+    log.info("claim flow started by hospital ${hospital.name.commonName}")
     val claim = receiveClaimRequest()
-
+    log.info("request received $claim")
     val claimState = calculateCompensation(hospital, claim)
-
+    log.info("compensation $claimState created for claim $claim. sending to hospital")
     sendClaimState(claimState)
-
-    val stx = receiveSignedTransaction()
-    verifySignedTransaction(stx)
-
-    // now sign it
-    val signingKeys = session.receive<List<PublicKey>>().unwrap { keys ->
-      serviceHub.keyManagementService.filterMyKeys(keys)
+    log.info("compensation claimstate sent back to hospital")
+    log.info("awaiting signed transaction")
+    // we create some logic here to check that the final transaction is verified and that the claim in the transaction is the one we quote for.
+    val signTransactionFlow = object : SignTransactionFlow(session, SignTransactionFlow.tracker()) {
+      override fun checkTransaction(stx: SignedTransaction) = requireThat {
+        stx.verify(serviceHub, checkSufficientSignatures = false) // verify the transaction - we set checkSufficientSignatures to false because we don't sign until this stage is complete
+        "the claim in the proposed output state matches the one we had received" using (stx.tx.outputsOfType<ClaimState>().first().request == claim)
+      }
     }
-    val mySignatures = signingKeys.map { key ->
-      serviceHub.createSignature(stx, key)
-    }
-    session.send(mySignatures)
-    val fullySigned = stx + mySignatures
-    waitForLedgerCommit(fullySigned.id)
-    return fullySigned
+    // we invoke the sign Transaction flow which in turn awaits the CollectSignaturesFlow above
+    val stx = subFlow(signTransactionFlow)
+    log.info("signed transaction received and validated. awaiting notary verification and ledger commit")
+    // we then await the notary verification and commit to the database
+    waitForLedgerCommit(stx.id)
+    return stx
   }
 
   @Suspendable
   private fun sendClaimState(claimState: ClaimState) {
     session.send(claimState)
-  }
-
-  @Suspendable
-  private fun verifySignedTransaction(stx: SignedTransaction) {
-    stx.tx.toLedgerTransaction(serviceHub).verify()
-  }
-
-  @Suspendable
-  private fun receiveSignedTransaction(): SignedTransaction {
-    return session.receive<SignedTransaction>().unwrap { it }
   }
 
   @Suspendable

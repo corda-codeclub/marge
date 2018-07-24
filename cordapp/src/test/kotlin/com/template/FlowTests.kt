@@ -28,7 +28,7 @@ class FlowTests {
 
   @Test
   fun `dummy test`() {
-    val patient = Patient("fuzz", "nw543419A")
+    val patient = Patient("fuzz", "NW533428A")
     val claimRequest = ClaimRequest(insurerNode.info.legalIdentities.first(),
       Amount(100, Currency.getInstance("GBP")),
       patient, "brain transplant")

@@ -54,9 +54,12 @@ class ClaimContract : Contract {
     val CONTRACT_ID : ContractClassName = ClaimContract::class.qualifiedName!!
   }
   override fun verify(tx: LedgerTransaction) {
+    val claimStates = tx.outputsOfType<ClaimState>()
     requireThat {
-      // TODO: checks to determine if the transaction is well formed - N.B. this is after a transaction is formed.
-      // In our example, there are additional check that happen within the flow
+      // TODO: much more checks can be placed here
+      "we must have one and only one claim state" using (claimStates.size == 1)
+      val claimState = claimStates.first()
+      "that amount being paid out is less than or equal to the claim request" using (claimState.cover <= claimState.request.amount)
     }
   }
 }
