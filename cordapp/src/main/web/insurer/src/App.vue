@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <img src="./assets/logo.png">
-    <div>{{name}}</div>
+    <div class="org-name">{{name}}</div>
   </div>
 </template>
 
@@ -51,5 +51,8 @@
     text-align: center;
     color: #2c3e50;
     margin-top: 60px;
+  }
+  .org-name {
+    font-size: 40px;
   }
 </style>
