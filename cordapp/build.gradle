@@ -78,6 +78,16 @@ processResources {
     dependsOn 'npmBuild'
 }
 
+clean {
+    dependsOn 'npmClean'
+}
+
+task npmClean(type: Exec) {
+    dependsOn 'npmInstall'
+    workingDir 'src/main/web/insurer'
+    commandLine 'npm', 'run', 'clean'
+}
+
 task npmBuild(type: Exec) {
     dependsOn 'npmInstall'
     workingDir 'src/main/web/insurer'

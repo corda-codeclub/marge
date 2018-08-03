@@ -72,3 +72,4 @@ crashlytics-build.properties
 
 # docs related
 docs/virtualenv/
+**/.vertx
