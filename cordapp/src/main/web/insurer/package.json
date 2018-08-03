@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "braid-client": "^3.2.1-20180803122404565",
+    "npm": "^6.3.0",
     "vue": "^2.5.16"
   },
   "devDependencies": {

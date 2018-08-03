@@ -44,7 +44,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 9000 + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port/api")
-        val static = StaticHandler.create("web/insurer/dist").setCachingEnabled(false)
+        val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
         BraidConfig()
