@@ -10,6 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
 
 @CordaService
@@ -26,14 +27,26 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
             when {
                 this.isOfNodeType("insurer") -> configureInsurer()
 //                this.isOfNodeType("bank") -> configureBank()
-//                this.isOfNodeType("hospital") -> configureHospital()
+                this.isOfNodeType("hospital") -> configureHospital()
                 else -> configureOtherNode()
             }
         }
     }
 
     private fun configureHospital() {
-
+        val service = HospitalAPI(serviceHub)
+        val name = serviceHub.myInfo.legalIdentities.first().name
+        val port = 9000 + name.organisation.hashCode() % 2
+        log.info("Starting Hospital $name on port http://localhost:$port/api")
+        val static = StaticHandler.create("web/hospital").setCachingEnabled(false)
+        val router = Routers.create(vertx, port)
+        router.get("/*").order(10000).handler(static)
+        BraidConfig()
+            .withVertx(vertx)
+            .withPort(port)
+            .withHttpServerOptions(HttpServerOptions().setSsl(false))
+            .withService("hospital", service)
+            .bootstrapBraid(serviceHub)
     }
 
     private fun configureBank() {
@@ -43,7 +56,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private fun configureInsurer() {
         val service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        val port = 9000 + name.organisation.hashCode() % 2
+        val port = 8000 + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port/api")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
