@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
     driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
         val (hospital, insurer1, insurer2, bank) = listOf(
                 startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
-                startNode(providedName = CordaX500Name("General Insurer", "New Delhi", "IN"), rpcUsers = listOf(user)),
+                startNode(providedName = CordaX500Name("General Insurer", "Delhi", "IN"), rpcUsers = listOf(user)),
                 startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)),
                 startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
         ).map { it.getOrThrow() }

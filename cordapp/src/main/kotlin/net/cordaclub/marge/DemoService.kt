@@ -21,6 +21,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private val vertx = Vertx.vertx()
 
     init {
+        log.info("Starting DemoService for ${serviceHub.myInfo.legalIdentities.first().name.organisation}")
         serviceHub.myInfo.apply {
             when {
                 this.isOfNodeType("insurer") -> configureInsurer()
@@ -60,6 +61,6 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     }
 
     private fun configureOtherNode() {
-        log.info("unknown node type. not configuring any services")
+        log.info("unknown node type for ${serviceHub.myInfo.legalIdentities.first().name.organisation} - not configuring any services")
     }
 }
