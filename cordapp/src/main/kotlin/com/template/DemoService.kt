@@ -2,6 +2,7 @@ package com.template
 
 import com.template.insurer.InsurerAPI
 import io.bluebank.braid.corda.BraidConfig
+import io.vertx.core.http.HttpServerOptions
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
@@ -35,8 +36,12 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
 
     private fun configureInsurer() {
         val service = InsurerAPI(serviceHub)
+        val name = serviceHub.myInfo.legalIdentities.first().name
+        val port = 9000 + name.organisation.hashCode() % 2
+        log.info("Starting Insurer $name on port http://localhost:$port/api")
         BraidConfig()
-            .withPort(8001)
+            .withPort(port)
+            .withHttpServerOptions(HttpServerOptions().setSsl(false))
             .withService("insurer", service)
             .bootstrapBraid(serviceHub)
     }

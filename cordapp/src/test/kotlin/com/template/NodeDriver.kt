@@ -22,10 +22,13 @@ import net.corda.testing.node.User
 fun main(args: Array<String>) {
     // No permissions required as we are not invoking flows.
     val user = User("user1", "test", permissions = setOf("ALL"))
-    driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true)) {
         val (partyA, partyB) = listOf(
-            startNode(providedName = CordaX500Name("Hospital", "London", "GB"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("Insurer", "New York", "US"), rpcUsers = listOf(user))).map { it.getOrThrow() }
+            startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
+            startNode(providedName = CordaX500Name("General Insurer", "New Delhi", "IN"), rpcUsers = listOf(user)),
+            startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)),
+            startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
+        ).map { it.getOrThrow() }
 
         startWebserver(partyA)
         startWebserver(partyB)
