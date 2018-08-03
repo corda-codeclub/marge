@@ -10,7 +10,7 @@
 
   export default {
     name: 'app',
-    data: function(){
+    data: function () {
       return {
         name: ''
       }
@@ -25,7 +25,7 @@
       getNodeName() {
         this.proxy.network.myNodeInfo()
           .then(nodeInfo => {
-            this.name = nodeInfo.legalIdentities[0].name;
+            this.name = parseX509Name(nodeInfo.legalIdentities[0].name).O;
           });
       },
       onOpen() {
@@ -37,10 +37,20 @@
       },
       onError(err) {
         console.error('connection error', err);
-      }
+      },
     }
-
   }
+
+  function parseX509Name(name) {
+    return name.split(',')
+      .map(it => it.trim())
+      .map(it => it.split('='))
+      .reduce((obj, pair) => {
+        obj[pair[0]] = pair[1];
+        return obj;
+      }, {});
+  }
+
 </script>
 
 <style>
@@ -52,6 +62,7 @@
     color: #2c3e50;
     margin-top: 60px;
   }
+
   .org-name {
     font-size: 40px;
   }
