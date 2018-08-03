@@ -1,7 +1,10 @@
 package net.cordaclub.marge
 
 import io.bluebank.braid.corda.BraidConfig
+import io.bluebank.braid.corda.router.Routers
+import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
+import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
@@ -14,6 +17,8 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     companion object {
         private val log = loggerFor<DemoService>()
     }
+
+    private val vertx = Vertx.vertx()
 
     init {
         serviceHub.myInfo.apply {
@@ -39,7 +44,11 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 9000 + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port/api")
+        val static = StaticHandler.create("web/insurer/dist").setCachingEnabled(false)
+        val router = Routers.create(vertx, port)
+        router.get("/*").order(10000).handler(static)
         BraidConfig()
+            .withVertx(vertx)
             .withPort(port)
             .withHttpServerOptions(HttpServerOptions().setSsl(false))
             .withService("insurer", service)

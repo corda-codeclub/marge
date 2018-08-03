@@ -23,14 +23,11 @@ fun main(args: Array<String>) {
     // No permissions required as we are not invoking flows.
     val user = User("user1", "test", permissions = setOf("ALL"))
     driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
-        val (partyA, partyB) = listOf(
-            startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("General Insurer", "New Delhi", "IN"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
+        listOf(
+//            startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
+            startNode(providedName = CordaX500Name("General Insurer", "New Delhi", "IN"), rpcUsers = listOf(user))
+//            startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)),
+//            startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
         ).map { it.getOrThrow() }
-
-        startWebserver(partyA)
-        startWebserver(partyB)
     }
 }
