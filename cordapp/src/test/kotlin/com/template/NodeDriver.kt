@@ -22,7 +22,7 @@ import net.corda.testing.node.User
 fun main(args: Array<String>) {
     // No permissions required as we are not invoking flows.
     val user = User("user1", "test", permissions = setOf("ALL"))
-    driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true)) {
+    driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
         val (partyA, partyB) = listOf(
             startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
             startNode(providedName = CordaX500Name("General Insurer", "New Delhi", "IN"), rpcUsers = listOf(user)),
