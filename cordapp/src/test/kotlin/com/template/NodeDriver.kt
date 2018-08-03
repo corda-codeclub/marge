@@ -24,8 +24,8 @@ fun main(args: Array<String>) {
     val user = User("user1", "test", permissions = setOf("ALL"))
     driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true)) {
         val (partyA, partyB) = listOf(
-                startNode(providedName = CordaX500Name("Hospital", "London", "GB"), rpcUsers = listOf(user)),
-                startNode(providedName = CordaX500Name("Insurer", "New York", "US"), rpcUsers = listOf(user))).map { it.getOrThrow() }
+            startNode(providedName = CordaX500Name("Hospital", "London", "GB"), rpcUsers = listOf(user)),
+            startNode(providedName = CordaX500Name("Insurer", "New York", "US"), rpcUsers = listOf(user))).map { it.getOrThrow() }
 
         startWebserver(partyA)
         startWebserver(partyB)
