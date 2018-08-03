@@ -56,6 +56,8 @@ dependencies {
     // CorDapp dependencies
     // Specify your CorDapp's dependencies below, including dependent CorDapps.
     cordapp project(":cordapp-contracts-states")
+    compile "io.bluebank.braid:braid-corda:3.2.0"
+    cordapp "io.cordite:dgl-cordapp:0.2.0"
 }
 
 task integrationTest(type: Test, dependsOn: []) {
