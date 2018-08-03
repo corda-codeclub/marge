@@ -18,16 +18,20 @@ class InsurerAPI(private val serviceHub: AppServiceHub) {
     }
 
     fun initialiseDemo() : Future<Unit> {
-        val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        return serviceHub.startFlow(GetAccountFlow(accountId = INSURER_ACCOUNT))
-            .toEasyFuture().mapEmpty<Unit>()
-            .recover {
-                serviceHub.startFlow(CreateAccountFlow(listOf(CreateAccountFlow.Request(INSURER_ACCOUNT)), notary))
-                    .toEasyFuture().mapEmpty()
-            }
-            .onSuccess {
-                initialised = true
-            }
+        if (!initialised) {
+            val notary = serviceHub.networkMapCache.notaryIdentities.first()
+            return serviceHub.startFlow(GetAccountFlow(accountId = INSURER_ACCOUNT))
+                .toEasyFuture().mapEmpty<Unit>()
+                .recover {
+                    serviceHub.startFlow(CreateAccountFlow(listOf(CreateAccountFlow.Request(INSURER_ACCOUNT)), notary))
+                        .toEasyFuture().mapEmpty()
+                }
+                .onSuccess {
+                    initialised = true
+                }
+        } else {
+            return Future.succeededFuture()
+        }
     }
 }
 
