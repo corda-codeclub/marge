@@ -1,12 +1,9 @@
 package net.cordaclub.marge
 
-import net.corda.core.contracts.Amount
-import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.util.*
 
 class FlowTests {
 

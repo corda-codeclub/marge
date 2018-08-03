@@ -73,3 +73,18 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         javaParameters = true   // Useful for reflection.
     }
 }
+
+processResources {
+    dependsOn 'npmBuild'
+}
+
+task npmBuild(type: Exec) {
+    dependsOn 'npmInstall'
+    workingDir 'src/main/web/insurer'
+    commandLine 'npm', 'run', 'build'
+}
+
+task npmInstall(type: Exec) {
+    workingDir 'src/main/web/insurer'
+    commandLine 'npm', 'install'
+}
