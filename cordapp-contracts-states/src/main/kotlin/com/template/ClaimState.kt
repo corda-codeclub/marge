@@ -60,6 +60,7 @@ class ClaimContract : Contract {
       "we must have one and only one claim state" using (claimStates.size == 1)
       val claimState = claimStates.first()
       "that amount being paid out is less than or equal to the claim request" using (claimState.cover <= claimState.request.amount)
+      "that there are no inputs states" using tx.inputStates.isEmpty()
     }
   }
 }

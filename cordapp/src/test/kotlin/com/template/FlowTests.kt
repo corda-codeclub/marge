@@ -15,7 +15,7 @@ class FlowTests {
   private val insurerNode = network.createNode()
 
   init {
-    listOf(hospitalNode, insurerNode).forEach {
+    listOf(insurerNode).forEach {
       it.registerInitiatedFlow(VerifyClaimFlow::class.java)
     }
   }
@@ -29,9 +29,11 @@ class FlowTests {
   @Test
   fun `dummy test`() {
     val patient = Patient("fuzz", "NW533428A")
-    val claimRequest = ClaimRequest(insurerNode.info.legalIdentities.first(),
+    val claimRequest = ClaimRequest(
+      insurerNode.info.legalIdentities.first(),
       Amount(100, Currency.getInstance("GBP")),
-      patient, "brain transplant")
+      patient,
+      "brain transplant")
 
     val future = hospitalNode.startFlow(RaiseClaimFlow(claimRequest))
     network.runNetwork()
