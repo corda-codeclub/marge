@@ -1,6 +1,5 @@
-package com.template
+package net.cordaclub.marge
 
-import com.template.insurer.InsurerAPI
 import io.bluebank.braid.corda.BraidConfig
 import io.vertx.core.http.HttpServerOptions
 import net.corda.core.node.AppServiceHub
@@ -8,6 +7,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.cordaclub.marge.insurer.InsurerAPI
 
 @CordaService
 class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {

@@ -1,6 +1,10 @@
-package com.template
+package net.cordaclub.marge
 
 import co.paralleluniverse.fibers.Suspendable
+import com.template.ClaimCommand
+import com.template.ClaimContract
+import com.template.ClaimRequest
+import com.template.ClaimState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*

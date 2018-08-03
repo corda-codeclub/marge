@@ -1,4 +1,4 @@
-package com.template.util
+package net.cordaclub.marge.util
 
 import io.vertx.core.Future
 import net.corda.core.concurrent.CordaFuture

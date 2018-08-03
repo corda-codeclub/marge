@@ -1,5 +1,6 @@
-package com.template
+package net.cordaclub.marge
 
+import com.template.TemplateState
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.utilities.NetworkHostAndPort.Companion.parse

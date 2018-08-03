@@ -1,11 +1,11 @@
-package com.template.insurer
+package net.cordaclub.marge.insurer
 
-import com.template.util.onSuccess
-import com.template.util.toEasyFuture
 import io.cordite.dgl.corda.account.CreateAccountFlow
 import io.cordite.dgl.corda.account.GetAccountFlow
 import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
+import net.cordaclub.marge.util.onSuccess
+import net.cordaclub.marge.util.toEasyFuture
 
 class InsurerAPI(private val serviceHub: AppServiceHub) {
     companion object {

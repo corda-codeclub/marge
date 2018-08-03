@@ -1,5 +1,7 @@
-package com.template
+package net.cordaclub.marge
 
+import com.template.ClaimRequest
+import com.template.Patient
 import net.corda.core.contracts.Amount
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
