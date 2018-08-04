@@ -13,7 +13,6 @@ import java.util.*
 
 @CordaSerializable
 data class InsurerPaymentPayload(
-        val treatmentState: StateAndRef<TreatmentState>,
         val outputTreatmentState: TreatmentState?,
         val amountToPay: Amount<Currency>,
         val insurerQuoteState: StateAndRef<InsurerQuoteState>)
@@ -38,14 +37,17 @@ class InsurerTreatmentPaymentFlow(
         // if the treatment is not paid in fully by the insurer, a new TreatmentState is created to be payed by the patient
         val outputTreatmentState = if (remaining.quantity == 0L) null else TreatmentState(inputTreatmentState.treatment, remaining, linearId = inputTreatmentState.linearId)
 
-        // send the [InsurerPaymentPayload] and receive the transaction containing the payment
-        insurerSession.send(InsurerPaymentPayload(treatmentState, outputTreatmentState, insuranceAmount, insurerQuoteState))
+        subFlow(SendStateAndRefFlow(insurerSession, listOf(treatmentState)))
 
-        return subFlow(object: SignTransactionFlow(insurerSession){
+        // send the [InsurerPaymentPayload] and receive the transaction containing the payment
+        insurerSession.send(InsurerPaymentPayload(outputTreatmentState, insuranceAmount, insurerQuoteState))
+
+        val tx = subFlow(object : SignTransactionFlow(insurerSession) {
             override fun checkTransaction(stx: SignedTransaction) {
                 //all good
             }
         })
+        return waitForLedgerCommit(tx.id)
     }
 }
 
@@ -56,6 +58,8 @@ class InsurerTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
         val hospital = session.counterparty
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
+        val treatmentState = subFlow(ReceiveStateAndRefFlow<TreatmentState>(session)).single()
+
         val insurerPaymentPayload = session.receive<InsurerPaymentPayload>().unwrap { it }
 
         //Build transaction
@@ -63,7 +67,7 @@ class InsurerTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
             addCommand(Command(InsurerQuoteCommand.RedeemQuote(), listOf(ourIdentity.owningKey)))
             addCommand(Command(TreatmentCommand.PayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
             addInputState(insurerPaymentPayload.insurerQuoteState)
-            addInputState(insurerPaymentPayload.treatmentState)
+            addInputState(treatmentState)
             insurerPaymentPayload.outputTreatmentState?.let { addOutputState(it, TreatmentContract.CONTRACT_ID, notary) }
             // todo Fuzz - select treatmentCost.amountToPay tokens from the insurer account and pay them to the hospital
         }
@@ -71,12 +75,7 @@ class InsurerTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
         val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
         val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))
 
-        val bank = serviceHub.networkMapCache.allNodes.find { node ->
-            node.legalIdentities.first().name.organisation.toLowerCase().contains("bank")
-        }!!.legalIdentities.first()
-
-
-        val result = subFlow(FinalityFlow(fullySignedTransaction, setOf(bank)))
+        val result = subFlow(FinalityFlow(fullySignedTransaction))
         println("Finished InsurerTreatmentPaymentResponseFlow")
 
         return result
@@ -98,12 +97,14 @@ class PatientTreatmentPaymentFlow(private val paymentFromInsurerTx: SignedTransa
 
         val bankSession = initiateFlow(bank)
         val treatmentState = paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().first()
-        bankSession.send(treatmentState)
-        return subFlow(object: SignTransactionFlow(bankSession){
+        subFlow(SendStateAndRefFlow(bankSession, listOf(treatmentState)))
+
+        val tx = subFlow(object : SignTransactionFlow(bankSession) {
             override fun checkTransaction(stx: SignedTransaction) {
                 //all good
             }
         })
+        return waitForLedgerCommit(tx.id)
     }
 }
 
@@ -114,13 +115,13 @@ class PatientTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
     override fun call(): SignedTransaction {
         val hospital = session.counterparty
 
-        val treatment = session.receive<StateAndRef<TreatmentState>>().unwrap { it }
+        val treatmentState = subFlow(ReceiveStateAndRefFlow<TreatmentState>(session)).single()
 
         //Build transaction
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val txb = TransactionBuilder(notary).apply {
             addCommand(Command(TreatmentCommand.PayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
-            addInputState(treatment)
+            addInputState(treatmentState)
             // todo Fuzz - select treatment.treatmentCost tokens from the patient account and pay them to the hospital
         }
 

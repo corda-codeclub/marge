@@ -37,7 +37,6 @@ fun main(args: Array<String>) {
         hospital.rpc.startFlow(::TreatmentPaymentFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
-        Thread.sleep(10000)
 
 //        startWebserver(partyA)
 //        startWebserver(partyB)
