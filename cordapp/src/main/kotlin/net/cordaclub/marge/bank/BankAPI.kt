@@ -6,7 +6,6 @@ import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
 import net.cordaclub.marge.Patient
-import net.cordaclub.marge.util.onSuccess
 import net.cordaclub.marge.util.toEasyFuture
 
 class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<Patient>) {

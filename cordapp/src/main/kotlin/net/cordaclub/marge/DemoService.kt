@@ -38,7 +38,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val service = HospitalAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 9000 + name.organisation.hashCode() % 2
-        log.info("Starting Hospital $name on port http://localhost:$port/api")
+        log.info("Starting Hospital $name on port http://localhost:$port")
         val static = StaticHandler.create("web/hospital").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
@@ -54,7 +54,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val service = BankAPI(serviceHub, Patients.allPatients)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 7000 + name.organisation.hashCode() % 2
-        log.info("Starting Bank $name on port http://localhost:$port/api")
+        log.info("Starting Bank $name on port http://localhost:$port")
         val static = StaticHandler.create("web/bank").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
@@ -70,7 +70,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 8000 + name.organisation.hashCode() % 2
-        log.info("Starting Insurer $name on port http://localhost:$port/api")
+        log.info("Starting Insurer $name on port http://localhost:$port")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
