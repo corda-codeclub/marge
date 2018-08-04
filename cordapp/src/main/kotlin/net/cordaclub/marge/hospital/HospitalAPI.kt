@@ -8,6 +8,8 @@ import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
 import net.corda.core.utilities.getOrThrow
 import net.cordaclub.marge.Initializer
+import net.cordaclub.marge.Patient
+import net.cordaclub.marge.Patients
 import net.cordaclub.marge.util.onSuccess
 import net.cordaclub.marge.util.toEasyFuture
 
@@ -43,6 +45,5 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
             }
     }
 }
-
 
 data class HospitalInitialState(val name: String, val patients: List<Patient>)
