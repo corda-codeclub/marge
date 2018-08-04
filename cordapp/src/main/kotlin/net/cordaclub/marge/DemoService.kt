@@ -10,6 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.cordaclub.marge.bank.BankAPI
 import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
 
@@ -26,7 +27,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         serviceHub.myInfo.apply {
             when {
                 this.isOfNodeType("insurer") -> configureInsurer()
-//                this.isOfNodeType("bank") -> configureBank()
+                this.isOfNodeType("bank") -> configureBank()
                 this.isOfNodeType("hospital") -> configureHospital()
                 else -> configureOtherNode()
             }
@@ -36,8 +37,8 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private fun configureHospital() {
         val service = HospitalAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        val port = 9000 + name.organisation.hashCode() % 2
-        log.info("Starting Hospital $name on port http://localhost:$port/api")
+        val port = 8100 + name.organisation.hashCode() % 2
+        log.info("Starting Hospital $name on port http://localhost:$port")
         val static = StaticHandler.create("web/hospital").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
@@ -50,14 +51,26 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     }
 
     private fun configureBank() {
-
+        val service = BankAPI(serviceHub)
+        val name = serviceHub.myInfo.legalIdentities.first().name
+        val port = 8200 + name.organisation.hashCode() % 2
+        log.info("Starting Bank $name on port http://localhost:$port")
+        val static = StaticHandler.create("web/bank").setCachingEnabled(false)
+        val router = Routers.create(vertx, port)
+        router.get("/*").order(10000).handler(static)
+        BraidConfig()
+            .withVertx(vertx)
+            .withPort(port)
+            .withHttpServerOptions(HttpServerOptions().setSsl(false))
+            .withService("bank", service)
+            .bootstrapBraid(serviceHub)
     }
 
     private fun configureInsurer() {
         val service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 8000 + name.organisation.hashCode() % 2
-        log.info("Starting Insurer $name on port http://localhost:$port/api")
+        log.info("Starting Insurer $name on port http://localhost:$port")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)

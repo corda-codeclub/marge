@@ -77,13 +77,14 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 processResources {
     dependsOn 'npmBuildInsurer'
     dependsOn 'npmBuildHospital'
+    dependsOn 'npmBuildBank'
 }
 
 clean {
     dependsOn 'npmCleanInsurer'
     dependsOn 'npmCleanHospital'
+    dependsOn 'npmCleanBank'
 }
-
 
 task npmCleanInsurer(type: Exec) {
     dependsOn 'npmInstallInsurer'
@@ -94,6 +95,12 @@ task npmCleanInsurer(type: Exec) {
 task npmCleanHospital(type: Exec) {
     dependsOn 'npmInstallHospital'
     workingDir 'src/main/web/hospital'
+    commandLine 'npm', 'run', 'clean'
+}
+
+task npmCleanBank(type: Exec) {
+    dependsOn 'npmInstallBank'
+    workingDir 'src/main/web/bank'
     commandLine 'npm', 'run', 'clean'
 }
 
@@ -110,6 +117,12 @@ task npmBuildHospital(type: Exec) {
     commandLine 'npm', 'run', 'build'
 }
 
+task npmBuildBank(type: Exec) {
+    dependsOn 'npmInstallBank'
+    workingDir 'src/main/web/bank'
+    commandLine 'npm', 'run', 'build'
+}
+
 task npmInstallInsurer(type: Exec) {
     workingDir 'src/main/web/insurer'
     commandLine 'npm', 'install'
@@ -117,5 +130,10 @@ task npmInstallInsurer(type: Exec) {
 
 task npmInstallHospital(type: Exec) {
     workingDir 'src/main/web/hospital'
+    commandLine 'npm', 'install'
+}
+
+task npmInstallBank(type: Exec) {
+    workingDir 'src/main/web/bank'
     commandLine 'npm', 'install'
 }

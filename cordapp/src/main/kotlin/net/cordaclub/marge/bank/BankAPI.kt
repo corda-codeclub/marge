@@ -1,4 +1,4 @@
-package net.cordaclub.marge.hospital
+package net.cordaclub.marge.bank
 
 import io.cordite.dgl.corda.account.CreateAccountFlow
 import io.cordite.dgl.corda.account.GetAccountFlow
@@ -7,9 +7,11 @@ import net.corda.core.node.AppServiceHub
 import net.cordaclub.marge.util.onSuccess
 import net.cordaclub.marge.util.toEasyFuture
 
-class HospitalAPI(private val serviceHub: AppServiceHub) {
+class BankAPI(private val serviceHub: AppServiceHub) {
     companion object {
         const val HOSPITAL_ACCOUNT = "hospital"
+        const val CURRENCY = "GBP"
+
     }
     private var initialised = false
 
