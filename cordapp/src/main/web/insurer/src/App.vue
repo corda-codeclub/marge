@@ -30,6 +30,14 @@
       },
       onOpen() {
         console.log('braid connected', this.proxy);
+        this.proxy.insurer.initialiseDemo()
+          .then((result, err) => {
+            if (err != null) {
+              console.error('failed to initialise')
+            } else {
+              console.log('service initialised')
+            }
+          });
         this.getNodeName()
       },
       onClose() {
