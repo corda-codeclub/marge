@@ -5,17 +5,13 @@ import io.cordite.dgl.corda.account.GetAccountFlow
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
+import net.cordaclub.marge.Initializer
 import net.cordaclub.marge.Patient
 import net.cordaclub.marge.util.toEasyFuture
 
-class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<Patient>) {
-    private var initialised = false
+class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<Patient>) : Initializer() {
 
-    fun isInitialised(): Boolean {
-        return initialised
-    }
-
-    fun initialiseDemo(): Future<Unit> {
+    override fun initialiseDemo(): Future<Unit> {
         if (!initialised) {
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
             initialised = CompositeFuture.all(
@@ -30,5 +26,4 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
         }
         return Future.succeededFuture()
     }
-
 }

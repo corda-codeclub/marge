@@ -1,21 +1,30 @@
 package net.cordaclub.marge
 
 import co.paralleluniverse.fibers.Suspendable
+import io.cordite.dgl.corda.account.Account
+import io.cordite.dgl.corda.account.GetAccountFlow
+import io.cordite.dgl.corda.token.TokenType
+import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
+import net.cordaclub.marge.hospital.HospitalAPI
+import net.cordaclub.marge.insurer.InsurerAPI
 import java.util.*
 
 @CordaSerializable
 data class InsurerPaymentPayload(
         val outputTreatmentState: TreatmentState?,
         val amountToPay: Amount<Currency>,
-        val insurerQuoteState: StateAndRef<InsurerQuoteState>)
+        val insurerQuoteState: StateAndRef<InsurerQuoteState>,
+        val hospitalAccount: Account.State
+)
 
 /**
  * Triggered by the hospital to collect money from the insurer
@@ -40,7 +49,8 @@ class InsurerTreatmentPaymentFlow(
         subFlow(SendStateAndRefFlow(insurerSession, listOf(treatmentState)))
 
         // send the [InsurerPaymentPayload] and receive the transaction containing the payment
-        insurerSession.send(InsurerPaymentPayload(outputTreatmentState, insuranceAmount, insurerQuoteState))
+        val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT))
+        insurerSession.send(InsurerPaymentPayload(outputTreatmentState, insuranceAmount, insurerQuoteState, hospitalAccount.state.data))
 
         val tx = subFlow(object : SignTransactionFlow(insurerSession) {
             override fun checkTransaction(stx: SignedTransaction) {
@@ -69,8 +79,15 @@ class InsurerTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
             addInputState(insurerPaymentPayload.insurerQuoteState)
             addInputState(treatmentState)
             insurerPaymentPayload.outputTreatmentState?.let { addOutputState(it, TreatmentContract.CONTRACT_ID, notary) }
-            // todo Fuzz - select treatmentCost.amountToPay tokens from the insurer account and pay them to the hospital
         }
+
+        //todo Fuzz - pls review
+        // select treatmentCost tokens from the insurer account and pay them to the hospital
+        val treatment = treatmentState.state.data
+        val toPay = treatment.treatmentCost
+        val insurerAccount = subFlow(GetAccountFlow(InsurerAPI.INSURER_ACCOUNT)).state.data
+        val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
+                txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, toPay.toToken(), serviceHub, ourIdentity, "pay for treatment $treatment")
 
         val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
         val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))
@@ -133,3 +150,4 @@ class PatientTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
     }
 }
 
+fun Amount<Currency>.toToken(): Amount<TokenType.Descriptor> = Amount(quantity = this.quantity, displayTokenSize = this.displayTokenSize, token = TokenType.Descriptor(this.token.symbol, this.quantity.toInt(), CordaX500Name.parse("test")))
