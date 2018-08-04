@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
                 startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
         ).map { it.getOrThrow() }
 
-        listOf(hospital, insurer1, bank).map { it.getInitializer().initialiseDemo() }
+        listOf(hospital, insurer1, bank).map { it.getInitializer().initialiseDemo() }.forEach { if (!it.isComplete) it.complete() }
 
         val patient = Patients.allPatients.first()
         val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
