@@ -10,6 +10,8 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -87,7 +89,7 @@ class InsurerTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
         val toPay = treatment.treatmentCost
         val insurerAccount = subFlow(GetAccountFlow(InsurerAPI.INSURER_ACCOUNT)).state.data
         val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
-                txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, toPay.toToken(), serviceHub, ourIdentity, "pay for treatment $treatment")
+                txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, toPay.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
 
         val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
         val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))
@@ -108,11 +110,7 @@ class PatientTreatmentPaymentFlow(private val paymentFromInsurerTx: SignedTransa
     @Suspendable
     override fun call(): SignedTransaction {
         // create a tx with the patient's bank to settle the rest
-        val bank = serviceHub.networkMapCache.allNodes.find { node ->
-            node.legalIdentities.first().name.organisation.toLowerCase().contains("bank")
-        }!!.legalIdentities.first()
-
-        val bankSession = initiateFlow(bank)
+        val bankSession = initiateFlow(getBank(serviceHub))
         val treatmentState = paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().first()
         subFlow(SendStateAndRefFlow(bankSession, listOf(treatmentState)))
 
@@ -150,4 +148,12 @@ class PatientTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
     }
 }
 
-fun Amount<Currency>.toToken(): Amount<TokenType.Descriptor> = Amount(quantity = this.quantity, displayTokenSize = this.displayTokenSize, token = TokenType.Descriptor(this.token.symbol, this.quantity.toInt(), CordaX500Name.parse("test")))
+fun getBank(serviceHub: ServiceHub) = serviceHub.networkMapCache.allNodes.find { node ->
+    node.legalIdentities.first().name.organisation.toLowerCase().contains("bank")
+}!!.legalIdentities.first()
+
+
+fun Amount<Currency>.toToken(issuer: Party): Amount<TokenType.Descriptor> = Amount(
+        quantity = this.quantity,
+        displayTokenSize = this.displayTokenSize,
+        token = TokenType.Descriptor("GBP", 1, issuer.name))
