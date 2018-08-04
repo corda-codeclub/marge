@@ -20,6 +20,9 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         private val log = loggerFor<DemoService>()
     }
 
+    //this is an ugly hack
+    lateinit var service: Initializer
+
     private val vertx = Vertx.vertx()
 
     init {
@@ -35,7 +38,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     }
 
     private fun configureHospital() {
-        val service = HospitalAPI(serviceHub)
+        service = HospitalAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 9000 + name.organisation.hashCode() % 2
         log.info("Starting Hospital $name on port http://localhost:$port")
@@ -43,15 +46,15 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
         BraidConfig()
-            .withVertx(vertx)
-            .withPort(port)
-            .withHttpServerOptions(HttpServerOptions().setSsl(false))
-            .withService("hospital", service)
-            .bootstrapBraid(serviceHub)
+                .withVertx(vertx)
+                .withPort(port)
+                .withHttpServerOptions(HttpServerOptions().setSsl(false))
+                .withService("hospital", service)
+                .bootstrapBraid(serviceHub)
     }
 
     private fun configureBank() {
-        val service = BankAPI(serviceHub, Patients.allPatients)
+        service = BankAPI(serviceHub, Patients.allPatients)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 7000 + name.organisation.hashCode() % 2
         log.info("Starting Bank $name on port http://localhost:$port")
@@ -67,7 +70,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     }
 
     private fun configureInsurer() {
-        val service = InsurerAPI(serviceHub)
+        service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 8000 + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port")
@@ -75,11 +78,11 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
         BraidConfig()
-            .withVertx(vertx)
-            .withPort(port)
-            .withHttpServerOptions(HttpServerOptions().setSsl(false))
-            .withService("insurer", service)
-            .bootstrapBraid(serviceHub)
+                .withVertx(vertx)
+                .withPort(port)
+                .withHttpServerOptions(HttpServerOptions().setSsl(false))
+                .withService("insurer", service)
+                .bootstrapBraid(serviceHub)
     }
 
     private fun NodeInfo.isOfNodeType(name: String): Boolean {
