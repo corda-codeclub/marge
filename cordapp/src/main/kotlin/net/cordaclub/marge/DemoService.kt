@@ -37,8 +37,8 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private fun configureHospital() {
         val service = HospitalAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        val port = 8100 + name.organisation.hashCode() % 2
-        log.info("Starting Hospital $name on port http://localhost:$port")
+        val port = 9000 + name.organisation.hashCode() % 2
+        log.info("Starting Hospital $name on port http://localhost:$port/api")
         val static = StaticHandler.create("web/hospital").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
@@ -51,26 +51,26 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     }
 
     private fun configureBank() {
-        val service = BankAPI(serviceHub)
+        val service = BankAPI(serviceHub, Patients.allPatients)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        val port = 8200 + name.organisation.hashCode() % 2
-        log.info("Starting Bank $name on port http://localhost:$port")
+        val port = 7000 + name.organisation.hashCode() % 2
+        log.info("Starting Bank $name on port http://localhost:$port/api")
         val static = StaticHandler.create("web/bank").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)
         BraidConfig()
-            .withVertx(vertx)
-            .withPort(port)
-            .withHttpServerOptions(HttpServerOptions().setSsl(false))
-            .withService("bank", service)
-            .bootstrapBraid(serviceHub)
+                .withVertx(vertx)
+                .withPort(port)
+                .withHttpServerOptions(HttpServerOptions().setSsl(false))
+                .withService("bank", service)
+                .bootstrapBraid(serviceHub)
     }
 
     private fun configureInsurer() {
         val service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
         val port = 8000 + name.organisation.hashCode() % 2
-        log.info("Starting Insurer $name on port http://localhost:$port")
+        log.info("Starting Insurer $name on port http://localhost:$port/api")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
         router.get("/*").order(10000).handler(static)

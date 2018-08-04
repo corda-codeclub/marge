@@ -2,42 +2,34 @@ package net.cordaclub.marge.bank
 
 import io.cordite.dgl.corda.account.CreateAccountFlow
 import io.cordite.dgl.corda.account.GetAccountFlow
+import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
+import net.cordaclub.marge.Patient
 import net.cordaclub.marge.util.onSuccess
 import net.cordaclub.marge.util.toEasyFuture
 
-class BankAPI(private val serviceHub: AppServiceHub) {
-    companion object {
-        const val HOSPITAL_ACCOUNT = "hospital"
-        const val CURRENCY = "GBP"
-
-    }
+class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<Patient>) {
     private var initialised = false
 
-    fun isInitialised() : Boolean {
+    fun isInitialised(): Boolean {
         return initialised
     }
 
-    fun initialiseDemo() : Future<Unit> {
+    fun initialiseDemo(): Future<Unit> {
         if (!initialised) {
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
-            return serviceHub.startFlow(GetAccountFlow(accountId = HOSPITAL_ACCOUNT))
-                .toEasyFuture().mapEmpty<Unit>()
-                .recover {
-                    serviceHub.startFlow(CreateAccountFlow(listOf(CreateAccountFlow.Request(HOSPITAL_ACCOUNT)), notary))
-                        .toEasyFuture().mapEmpty()
-                }
-                .onSuccess {
-                    initialised = true
-                }
-        } else {
-            return Future.succeededFuture()
+            initialised = CompositeFuture.all(
+                    patients.map { patient ->
+                        serviceHub.startFlow(GetAccountFlow(accountId = patient.name))
+                                .toEasyFuture().mapEmpty<Unit>()
+                                .recover {
+                                    serviceHub.startFlow(CreateAccountFlow(listOf(CreateAccountFlow.Request(patient.name)), notary)).toEasyFuture().mapEmpty()
+                                }
+                    }
+            ).succeeded()
         }
-    }
-
-    fun getPatients() {
-
+        return Future.succeededFuture()
     }
 
 }
