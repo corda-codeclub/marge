@@ -33,12 +33,13 @@ fun main(args: Array<String>) {
             println("Consumed: ${vaultUpdate.consumed}")
         }
 
-        //todo Fuzz - monitor the tokens
         hospital.rpc.startFlow(::TreatmentPaymentFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
 
-//        startWebserver(partyA)
-//        startWebserver(partyB)
+//        startWebserver(hospital)
+//        startWebserver(insurer1)
+//        startWebserver(insurer2)
+//        startWebserver(bank)
     }
 }

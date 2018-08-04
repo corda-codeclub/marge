@@ -10,6 +10,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.cordaclub.marge.bank.BankAPI
 import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
 
@@ -26,7 +27,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
         serviceHub.myInfo.apply {
             when {
                 this.isOfNodeType("insurer") -> configureInsurer()
-//                this.isOfNodeType("bank") -> configureBank()
+                this.isOfNodeType("bank") -> configureBank()
                 this.isOfNodeType("hospital") -> configureHospital()
                 else -> configureOtherNode()
             }
@@ -49,8 +50,21 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
             .bootstrapBraid(serviceHub)
     }
 
+    // todo Fuzz - pls review this
     private fun configureBank() {
-
+        val service = BankAPI(serviceHub, Patients.allPatients)
+        val name = serviceHub.myInfo.legalIdentities.first().name
+        val port = 7000 + name.organisation.hashCode() % 2
+        log.info("Starting Bank $name on port http://localhost:$port/api")
+        val static = StaticHandler.create("web/bank").setCachingEnabled(false)
+        val router = Routers.create(vertx, port)
+        router.get("/*").order(10000).handler(static)
+        BraidConfig()
+                .withVertx(vertx)
+                .withPort(port)
+                .withHttpServerOptions(HttpServerOptions().setSsl(false))
+                .withService("bank", service)
+                .bootstrapBraid(serviceHub)
     }
 
     private fun configureInsurer() {
