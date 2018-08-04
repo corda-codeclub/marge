@@ -26,7 +26,7 @@ class InsurerAPI(private val serviceHub: AppServiceHub) : Initializer(){
                 val ledgerApi = LedgerApiImpl(serviceHub)
                 ledgerApi.createTokenType("GBP", 1, notary.name).getOrThrow()
                 val account = ledgerApi.createAccount(INSURER_ACCOUNT, notary.name).getOrThrow()
-                ledgerApi.issueToken(account.address.accountId, "100000.00", "GBP", "issuance", notary.name)
+                ledgerApi.issueToken(account.address.accountId, "100000.00", "GBP", "issuance", notary.name).getOrThrow()
             }
         }
         initialised = true

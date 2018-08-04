@@ -3,6 +3,7 @@ package net.cordaclub.marge
 import co.paralleluniverse.fibers.Suspendable
 import io.cordite.dgl.corda.account.Account
 import io.cordite.dgl.corda.account.GetAccountFlow
+import io.cordite.dgl.corda.impl.LedgerApiImpl
 import io.cordite.dgl.corda.token.TokenType
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions
 import net.corda.core.contracts.Amount
@@ -114,6 +115,9 @@ class PatientTreatmentPaymentFlow(private val paymentFromInsurerTx: SignedTransa
         val treatmentState = paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().first()
         subFlow(SendStateAndRefFlow(bankSession, listOf(treatmentState)))
 
+        val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data
+        bankSession.send(hospitalAccount)
+
         val tx = subFlow(object : SignTransactionFlow(bankSession) {
             override fun checkTransaction(stx: SignedTransaction) {
                 //all good
@@ -132,13 +136,22 @@ class PatientTreatmentPaymentResponseFlow(private val session: FlowSession) : Fl
 
         val treatmentState = subFlow(ReceiveStateAndRefFlow<TreatmentState>(session)).single()
 
+        val hospitalAccount = session.receive<Account.State>().unwrap { it }
+
         //Build transaction
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val txb = TransactionBuilder(notary).apply {
             addCommand(Command(TreatmentCommand.PayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
             addInputState(treatmentState)
-            // todo Fuzz - select treatment.treatmentCost tokens from the patient account and pay them to the hospital
         }
+
+        //todo Fuzz - pls review
+        // select treatmentCost tokens from the patient account and pay them to the hospital
+        val treatment = treatmentState.state.data
+        val toPay = treatment.treatmentCost
+        val patientAccount = subFlow(GetAccountFlow(treatment.treatment.patient.name)).state.data
+        val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
+                txb, patientAccount.address, hospitalAccount.address, toPay.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
 
         val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
         val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))

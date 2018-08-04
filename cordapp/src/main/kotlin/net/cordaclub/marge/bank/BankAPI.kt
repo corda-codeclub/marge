@@ -29,7 +29,7 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
                 ledgerApi.createTokenType("GBP", 1, notary.name).getOrThrow()
                 patients.map { patient ->
                     val account = ledgerApi.createAccount(patient.name, notary.name).getOrThrow()
-                    ledgerApi.issueToken(account.address.accountId, "10000.00", "GBP", "issuance", notary.name)
+                    ledgerApi.issueToken(account.address.accountId, "100000.00", "GBP", "issuance", notary.name).getOrThrow()
                 }
             }
         }
