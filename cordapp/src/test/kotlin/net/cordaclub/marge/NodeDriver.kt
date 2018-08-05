@@ -1,16 +1,26 @@
 package net.cordaclub.marge
 
-import io.vertx.core.Future
+import io.cordite.dgl.corda.account.AccountAddress
+import io.cordite.dgl.corda.account.CreateAccountFlow
+import io.cordite.dgl.corda.token.CreateTokenTypeFlow
+import io.cordite.dgl.corda.token.Token
+import io.cordite.dgl.corda.token.TokenType
+import io.cordite.dgl.corda.token.flows.IssueTokenFlow
+import io.cordite.dgl.corda.token.flows.TransferTokenFlow
+import io.cordite.dgl.corda.token.issuedBy
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.cordaclub.marge.util.onFail
-import net.cordaclub.marge.util.onSuccess
+import java.math.BigDecimal
 
 class NodeDriver {
     companion object {
@@ -18,25 +28,56 @@ class NodeDriver {
 
         @JvmStatic
         fun main(args: Array<String>) {
+            val hospitalName = CordaX500Name("Fixalot Hospital", "London", "GB")
+            val bankName = CordaX500Name("Kaching! Bank", "Paris", "FR")
+            val notaryName = CordaX500Name("Notary", "London", "GB")
             // No permissions required as we are not invoking flows.
             val user = User("user1", "test", permissions = setOf("ALL"))
-            driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
-                val hospital = startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)).getOrThrow()
-                hospital.getInitializer().initialiseDemo()
+            driver(DriverParameters(
+                isDebug = true,
+                waitForAllNodesToFinish = true,
+                startNodesInProcess = true,
+                notarySpecs = listOf(NotarySpec(notaryName, false, listOf(user))),
+                extraCordappPackagesToScan = listOf("io.cordite")
+            )) {
+
+                val hospital = startNode(providedName = hospitalName, rpcUsers = listOf(user)).getOrThrow()
+                val bank = startNode(providedName = bankName, rpcUsers = listOf(user)).getOrThrow()
+
+                val hospitalProxy = CordaRPCClient(hospital.rpcAddress).start(user.username, user.password).proxy
+                val bankProxy = CordaRPCClient(bank.rpcAddress).start(user.username, user.password).proxy
+
+                hospitalProxy.startFlow(::CreateAccountFlow, listOf(CreateAccountFlow.Request("hospital")), hospitalProxy.notaryIdentities().first()).returnValue.getOrThrow()
+
+                bankProxy.startFlow(::CreateAccountFlow, listOf(CreateAccountFlow.Request("bank")), bankProxy.notaryIdentities().first()).returnValue.getOrThrow()
+                val tokenType = bankProxy.startFlow(::CreateTokenTypeFlow, "GBP", 2, hospitalProxy.notaryIdentities().first()).returnValue.getOrThrow().tx.outputStates.first() as TokenType.State
+                val descriptor = tokenType.descriptor
+                val issuer = bankProxy.nodeInfo().legalIdentities.first()
+                val amount = Amount.fromDecimal(BigDecimal(100), descriptor)
+
+                val token = Token.generateIssuance(amount.issuedBy(issuer.ref(0)), "bank", issuer, "issuance")
+                bankProxy.startFlow(::IssueTokenFlow, token, bankProxy.notaryIdentities().first(), "issuance").returnValue.getOrThrow()
+                val srcAddress = AccountAddress("bank", bankName)
+                val destAddress = AccountAddress("hospital", hospitalName)
+                val transfer = bankProxy.startFlow(::TransferTokenFlow, srcAddress, destAddress, Amount.fromDecimal(BigDecimal(1), descriptor), "transfer", bankProxy.notaryIdentities().first()).returnValue.getOrThrow()
+                println(transfer)
+//                bankProxy.startFlow(::IssueTokenFlow, )
+
 //        val insurer1 = startNode(providedName = CordaX500Name("General Insurer", "Delhi", "IN"), rpcUsers = listOf(user)).getOrThrow()
 //        val insurer2 = startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)).getOrThrow()
-                val bank = startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user)).getOrThrow()
 
-                val nodes : List<NodeHandle> = listOf()
-                // chain the initialisers in a sequence
-                nodes.fold(Future.succeededFuture<Unit>()) { acc, nh ->
-                    acc.compose { nh.getInitializer().initialiseDemo() }
-                }.onSuccess {
-                    log.info("nodes started - opening webpages")
-                    nodes.forEach { it.openWebPage() }
-                }.onFail {
-                    log.error("failed to start app", it)
-                }
+//                val nodes : List<NodeHandle> = listOf(hospital, bank)
+//
+//                bank.
+//                // chain the initialisers in a sequence
+//                nodes.fold(Future.succeededFuture<Unit>()) { acc, nh ->
+//                    acc.compose { nh.getInitializer().initialiseDemo() }
+//                }.onSuccess {
+//                    log.info("nodes started - opening webpages")
+//                    nodes.forEach { it.openWebPage() }
+//                }.onFail {
+//                    log.error("failed to start app", it)
+//                }
 
 //        listOf(hospital, insurer1, bank).map { it.getInitializer().initialiseDemo() }.forEach { if (!it.isComplete) it.complete() }
 

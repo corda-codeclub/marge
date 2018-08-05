@@ -1,9 +1,7 @@
 package net.cordaclub.marge.hospital
 
 import io.cordite.dgl.corda.impl.LedgerApiImpl
-import io.cordite.dgl.corda.token.TokenType
 import io.vertx.core.Future
-import net.corda.core.contracts.Amount
 import net.corda.core.node.AppServiceHub
 import net.corda.core.utilities.loggerFor
 import net.cordaclub.marge.Initializer
@@ -11,7 +9,6 @@ import net.cordaclub.marge.Patient
 import net.cordaclub.marge.Patients
 import net.cordaclub.marge.util.onFail
 import net.cordaclub.marge.util.onSuccess
-import java.math.BigDecimal
 
 class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
     companion object {
@@ -43,7 +40,7 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
                 ledgerApi.balanceForAccount(HOSPITAL_ACCOUNT)
             }
             .map { balances ->
-                val balancesString = balances.map { BigDecimal(it.quantity).multiply(it.displayTokenSize).toString() }
+                val balancesString = balances.firstOrNull()?.toDecimal()?.toString()?:"0.00"
                 HospitalInitialState(
                     serviceHub.myInfo.legalIdentities.first().name.organisation,
                     Patients.allPatients,
@@ -53,4 +50,4 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
     }
 }
 
-data class HospitalInitialState(val name: String, val patients: List<Patient>, val balances: List<String>)
+data class HospitalInitialState(val name: String, val patients: List<Patient>, val balance: String)

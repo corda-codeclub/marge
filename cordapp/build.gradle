@@ -1,5 +1,5 @@
 repositories {
-    mavenLocal()
+//    mavenLocal()
     jcenter()
     mavenCentral()
     maven { url 'https://jitpack.io' }
@@ -136,4 +136,16 @@ task npmInstallHospital(type: Exec) {
 task npmInstallBank(type: Exec) {
     workingDir 'src/main/web/bank'
     commandLine 'npm', 'install'
+}
+
+npmInstallBank.onlyIf {
+    !(new File('src/main/web/bank/node_modules')).exists()
+}
+
+npmInstallInsurer.onlyIf {
+    !(new File('src/main/web/insurer/node_modules')).exists()
+}
+
+npmInstallHospital.onlyIf {
+    !(new File('src/main/web/hospital/node_modules')).exists()
 }

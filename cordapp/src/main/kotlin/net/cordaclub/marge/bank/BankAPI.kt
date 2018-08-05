@@ -113,7 +113,10 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
 
                 val balances = accounts.map { it.address.accountId }
                     .sorted()
-                    .map { it to Account.getBalances(serviceHub, it).firstOrNull()?.toDecimal().toString()}.toMap()
+                    .map {
+                        val balance = Account.getBalances(serviceHub, it).firstOrNull()
+                            ?.toDecimal()?.toString()?:"0.00"
+                        it to balance}.toMap()
                 BankInitialState(serviceHub.myInfo.legalIdentities.first().name.organisation, balances)
             }
     }

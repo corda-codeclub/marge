@@ -22,23 +22,15 @@
       window.proxy = this.proxy; // for experimentation
     },
     methods: {
-      getNodeName() {
-        this.proxy.network.myNodeInfo()
-          .then(nodeInfo => {
-            this.name = parseX509Name(nodeInfo.legalIdentities[0].name).O;
-          });
-      },
       onOpen() {
         console.log('braid connected', this.proxy);
-        this.proxy.bank.initialiseDemo()
-          .then((result, err) => {
-            if (err != null) {
-              console.error('failed to initialise')
-            } else {
-              console.log('service initialised')
-            }
+        this.proxy.bank.getInitialState()
+          .then(result => {
+            console.log("initial state", result);
+          })
+          .catch(err => {
+            console.log("failed to get initial state", err);
           });
-        this.getNodeName()
       },
       onClose() {
         console.log('braid closed');
