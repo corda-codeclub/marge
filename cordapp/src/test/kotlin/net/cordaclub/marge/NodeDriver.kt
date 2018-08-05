@@ -9,6 +9,7 @@ import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.node.User
+import net.cordaclub.marge.InsurerQuotingFlows.RetrieveInsurerQuotesFlow
 import net.cordaclub.marge.Insurers.allInsurers
 
 fun main(args: Array<String>) {
@@ -40,7 +41,7 @@ fun main(args: Array<String>) {
             println("Consumed: ${vaultUpdate.consumed}")
         }
 
-        hospital.rpc.startFlow(::TreatmentPaymentFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
+        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
 
