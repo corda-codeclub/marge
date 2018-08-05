@@ -36,9 +36,9 @@ class RetrieveInsurerQuotesFlow(private val treatmentCoverageEstimation: Treatme
             // send the claim request and receive the claim state
             val insurerQuote = session.sendAndReceive<Amount<Currency>>(treatmentCoverageEstimation).unwrap { it }
 
-            log.debug("Received quote: ${insurerQuote} from insurer ${insurer}")
+            println("Received quote: ${insurerQuote} from insurer ${insurer}")
             Pair(insurerQuote, session)
-        }.sortedBy { it.first }
+        }.sortedByDescending { it.first }
 
         for ((_, session) in quotes.drop(1)) {
             session.send(QuoteStatus.REJECTED_QUOTE)
