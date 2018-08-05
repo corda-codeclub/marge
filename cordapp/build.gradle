@@ -74,6 +74,10 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     }
 }
 
+/**
+ * we will disable all the npm tasks to speed up the build
+ * when editing the web source, please make sure that they are built before committing
+
 processResources {
     dependsOn 'npmBuildInsurer'
     dependsOn 'npmBuildHospital'
@@ -149,3 +153,5 @@ npmInstallInsurer.onlyIf {
 npmInstallHospital.onlyIf {
     !(new File('src/main/web/hospital/node_modules')).exists()
 }
+
+ */

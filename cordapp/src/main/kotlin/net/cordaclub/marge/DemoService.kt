@@ -8,6 +8,7 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.handler.StaticHandler
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.cordaclub.marge.bank.BankAPI
@@ -16,7 +17,7 @@ import net.cordaclub.marge.insurer.InsurerAPI
 import java.awt.Desktop
 import java.net.URI
 
-//@CordaService
+@CordaService
 class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<DemoService>()

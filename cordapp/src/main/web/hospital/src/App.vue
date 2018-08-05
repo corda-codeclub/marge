@@ -2,6 +2,7 @@
   <div id="app" v-bind:class="{loading: loading}">
     <img src="./assets/logo.png">
     <div class="org-name">{{state.name}}</div>
+    <div><label>Balance: £</label><span>{{state.balance}}</span></div>
     <div v-cloak>
       <h2>Patients</h2>
       <ul>
@@ -23,7 +24,8 @@
       return {
         state: {
           name: '',
-          patients: []
+          patients: [],
+          balance: "0.00"
         },
         loading: true
       }
@@ -39,7 +41,7 @@
         console.log('braid connected', this.proxy);
         this.proxy.hospital.getInitialState()
           .then(state => {
-            console.log(state.balances[0]);
+            console.log(state.balance);
             this.state = state;
             this.loading = false
           })
@@ -53,17 +55,6 @@
       },
     }
   }
-
-  function parseX509Name(name) {
-    return name.split(',')
-      .map(it => it.trim())
-      .map(it => it.split('='))
-      .reduce((obj, pair) => {
-        obj[pair[0]] = pair[1];
-        return obj;
-      }, {});
-  }
-
 </script>
 
 <style>
