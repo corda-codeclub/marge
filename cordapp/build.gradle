@@ -1,5 +1,5 @@
 repositories {
-    mavenLocal()
+//    mavenLocal()
     jcenter()
     mavenCentral()
     maven { url 'https://jitpack.io' }
@@ -74,6 +74,10 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     }
 }
 
+/**
+ * we will disable all the npm tasks to speed up the build
+ * when editing the web source, please make sure that they are built before committing
+
 processResources {
     dependsOn 'npmBuildInsurer'
     dependsOn 'npmBuildHospital'
@@ -137,3 +141,17 @@ task npmInstallBank(type: Exec) {
     workingDir 'src/main/web/bank'
     commandLine 'npm', 'install'
 }
+
+npmInstallBank.onlyIf {
+    !(new File('src/main/web/bank/node_modules')).exists()
+}
+
+npmInstallInsurer.onlyIf {
+    !(new File('src/main/web/insurer/node_modules')).exists()
+}
+
+npmInstallHospital.onlyIf {
+    !(new File('src/main/web/hospital/node_modules')).exists()
+}
+
+ */

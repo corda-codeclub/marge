@@ -1,5 +1,6 @@
 package net.cordaclub.marge
 
+import io.vertx.core.Future
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
@@ -11,21 +12,38 @@ import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.node.User
 import net.cordaclub.marge.InsurerQuotingFlows.RetrieveInsurerQuotesFlow
 import net.cordaclub.marge.Insurers.allInsurers
+import net.cordaclub.marge.util.onFail
+import net.cordaclub.marge.util.onSuccess
+import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
+    val log = LoggerFactory.getLogger("NodeDriver")
+
     // No permissions required as we are not invoking flows.
-    val user = User("user1", "test", permissions = setOf("ALL"))
+    val users = listOf(User("user1", "test", permissions = setOf("ALL")))
+
+    // the ordering here is important - we want all the respective nodes to setup their accounts before we start issuing currency
+    val names = listOf(CordaX500Name("Fixalot Hospital", "London", "GB")) + allInsurers + listOf(CordaX500Name("Kaching! Bank", "Paris", "FR"))
+
     driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
-        val (hospital, bank) = listOf(
-                startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
-                startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
-        ).map { it.getOrThrow() }
 
-        val insurers = allInsurers.map {
-            startNode(providedName = it, rpcUsers = listOf(user)).getOrThrow()
+        val nodes = names.map {
+            startNode(providedName = it, rpcUsers = users)
+        }.map { it.getOrThrow() }
+
+        val hospital = nodes.first()
+        val insurers = nodes.drop(1).dropLast(1)
+
+        log.info("initialing node state")
+
+        nodes.fold(Future.succeededFuture<Unit>()) { acc, node ->
+            acc.compose { node.getInitializer().initialiseDemo() }
+        }.onSuccess {
+            log.info("nodes initialised")
+            nodes.forEach { it.openWebPage() }
+        }.onFail { err ->
+            log.error("failed to initalise nodes", err)
         }
-
-        (listOf(hospital, bank) + insurers).map { it.getInitializer().initialiseDemo() }.forEach { if (!it.isComplete) it.complete() }
 
         val patient = Patients.allPatients.first()
         val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
@@ -53,3 +71,4 @@ fun main(args: Array<String>) {
 }
 
 fun NodeHandle.getInitializer() = (this as InProcessImpl).services.cordaService(DemoService::class.java).service
+fun NodeHandle.openWebPage() = (this as InProcessImpl).services.cordaService(DemoService::class.java).openWebPage()

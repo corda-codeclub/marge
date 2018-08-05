@@ -1,7 +1,18 @@
 <template>
   <div id="app">
     <img src="./assets/logo.png">
-    <div class="org-name">{{name}}</div>
+    <div class="org-name">{{state.name}}</div>
+    <table>
+      <thead>
+      <tr><td>Account</td><td>Amount</td></tr>
+      </thead>
+      <tbody>
+      <tr v-for="(balance, account) in state.balances">
+        <td>{{account}}</td>
+        <td>£{{balance}}</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -12,7 +23,12 @@
     name: 'app',
     data: function () {
       return {
-        name: ''
+        state: {
+          name: 'Init',
+          balances: {
+            "John": "100.00"
+          }
+        }
       }
     },
     mounted() {
@@ -22,23 +38,16 @@
       window.proxy = this.proxy; // for experimentation
     },
     methods: {
-      getNodeName() {
-        this.proxy.network.myNodeInfo()
-          .then(nodeInfo => {
-            this.name = parseX509Name(nodeInfo.legalIdentities[0].name).O;
-          });
-      },
       onOpen() {
         console.log('braid connected', this.proxy);
-        this.proxy.bank.initialiseDemo()
-          .then((result, err) => {
-            if (err != null) {
-              console.error('failed to initialise')
-            } else {
-              console.log('service initialised')
-            }
+        this.proxy.bank.getInitialState()
+          .then(state => {
+            console.log("initial state", state);
+            this.state = state;
+          })
+          .catch(err => {
+            console.log("failed to get initial state", err);
           });
-        this.getNodeName()
       },
       onClose() {
         console.log('braid closed');
@@ -48,17 +57,6 @@
       },
     }
   }
-
-  function parseX509Name(name) {
-    return name.split(',')
-      .map(it => it.trim())
-      .map(it => it.split('='))
-      .reduce((obj, pair) => {
-        obj[pair[0]] = pair[1];
-        return obj;
-      }, {});
-  }
-
 </script>
 
 <style>
