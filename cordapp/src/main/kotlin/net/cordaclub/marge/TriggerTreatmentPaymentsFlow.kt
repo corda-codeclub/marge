@@ -19,7 +19,7 @@ import java.util.*
  */
 @StartableByRPC
 @StartableByService
-class TreatmentPaymentFlow(private val treatment: Treatment, private val treatmentCost: Amount<Currency>, private val insurerQuoteState: StateAndRef<InsurerQuoteState>) : FlowLogic<Unit>() {
+class TriggerTreatmentPaymentsFlow(private val treatment: Treatment, private val treatmentCost: Amount<Currency>, private val insurerQuoteState: StateAndRef<InsurerQuoteState>) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
@@ -31,13 +31,13 @@ class TreatmentPaymentFlow(private val treatment: Treatment, private val treatme
         // The amount to be paid by the insurer
         val insuranceAmount = min(treatmentCost, insurerQuoteState.state.data.maxCoveredValue)
 
-        val paymentFromInsurerTx = subFlow(InsurerTreatmentPaymentFlow(insurerQuoteState, treatmentState, insuranceAmount))
+        val paymentFromInsurerTx = subFlow(InsurerFlows.InsurerTreatmentPaymentFlow(insurerQuoteState, treatmentState, insuranceAmount))
 
         // the patient needs to cover the difference
         if (paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().isNotEmpty()) {
-            subFlow(PatientTreatmentPaymentFlow(paymentFromInsurerTx))
+            subFlow(PatientFlows.PatientTreatmentPaymentFlow(paymentFromInsurerTx))
         }
-        println("Finished TreatmentPaymentFlow")
+        println("Finished TriggerTreatmentPaymentsFlow")
     }
 
     @Suspendable

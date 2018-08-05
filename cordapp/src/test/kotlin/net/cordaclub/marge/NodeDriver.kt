@@ -14,6 +14,8 @@ import net.cordaclub.marge.util.onFail
 import net.cordaclub.marge.util.onSuccess
 import org.slf4j.LoggerFactory
 
+import net.cordaclub.marge.InsurerQuotingFlows.RetrieveInsurerQuotesFlow
+import net.cordaclub.marge.Insurers.allInsurers
 
 fun main(args: Array<String>) {
     val log = LoggerFactory.getLogger("NodeDriver")
@@ -22,34 +24,22 @@ fun main(args: Array<String>) {
     val user = User("user1", "test", permissions = setOf("ALL"))
 
     driver(DriverParameters(isDebug = true, waitForAllNodesToFinish = true, startNodesInProcess = true, extraCordappPackagesToScan = listOf("io.cordite"))) {
-        val nodes = listOf(
-            startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("General Insurer", "Delhi", "IN"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("Frugal Insurer", "Tokyo", "JP"), rpcUsers = listOf(user)),
-            startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
+        val (hospital, bank) = listOf(
+                startNode(providedName = CordaX500Name("Fixalot Hospital", "London", "GB"), rpcUsers = listOf(user)),
+                startNode(providedName = CordaX500Name("Kaching! Bank", "Paris", "FR"), rpcUsers = listOf(user))
         ).map { it.getOrThrow() }
 
-        log.info("all nodes started")
-        val (hospital, insurer1, insurer2, bank) = nodes
-
-        log.info("initialising state on each node")
-        nodes.fold(Future.succeededFuture<Unit>()) { acc, node ->
-            acc.compose { node.getInitializer().initialiseDemo() }
-        }.onSuccess {
-            nodes.forEach {
-                log.info("initialisation successful")
-                it.openWebPage()
-            }
-        }.onFail {
-            log.error("initialisation failed", it)
+        val insurers = allInsurers.map {
+            startNode(providedName = it, rpcUsers = listOf(user)).getOrThrow()
         }
+
+        (listOf(hospital, bank) + insurers).map { it.getInitializer().initialiseDemo() }.forEach { if (!it.isComplete) it.complete() }
 
         val patient = Patients.allPatients.first()
         val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
         val estimation = TreatmentCoverageEstimation(treatment, 1000.POUNDS)
 
-//        val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, listOf(insurer1.nodeInfo.legalIdentities.first(), insurer2.nodeInfo.legalIdentities.first())).returnValue.getOrThrow()
-        val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, listOf(insurer1.nodeInfo.legalIdentities.first())).returnValue.getOrThrow()
+        val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, insurers.map { it.nodeInfo.legalIdentities.first() }).returnValue.getOrThrow()
         val quote = estimationTx.coreTransaction.outRefsOfType<InsurerQuoteState>()[0]
 
         println("Successfully got quote: ${quote.state.data.maxCoveredValue} from: ${quote.state.data.insurer}")
@@ -59,7 +49,7 @@ fun main(args: Array<String>) {
             println("Consumed: ${vaultUpdate.consumed}")
         }
 
-        hospital.rpc.startFlow(::TreatmentPaymentFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
+        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
 

@@ -13,7 +13,7 @@ class FlowTests {
 
     init {
         listOf(insurerNode).forEach {
-            it.registerInitiatedFlow(InsurerRespondFlow::class.java)
+            it.registerInitiatedFlow(InsurerQuotingFlows.InsurerRespondFlow::class.java)
         }
     }
 

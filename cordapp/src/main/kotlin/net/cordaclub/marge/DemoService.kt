@@ -11,6 +11,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
+import net.cordaclub.marge.Insurers.allInsurers
 import net.cordaclub.marge.bank.BankAPI
 import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
@@ -79,7 +80,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private fun configureInsurer() {
         service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        port = 8000 + name.organisation.hashCode() % 2
+        val port = 8000 + allInsurers.indexOf(name) + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
