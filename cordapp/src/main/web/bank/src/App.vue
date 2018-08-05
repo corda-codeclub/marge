@@ -1,7 +1,18 @@
 <template>
   <div id="app">
     <img src="./assets/logo.png">
-    <div class="org-name">{{name}}</div>
+    <div class="org-name">{{state.name}}</div>
+    <table>
+      <thead>
+      <tr><td>Account</td><td>Amount</td></tr>
+      </thead>
+      <tbody>
+      <tr v-for="(balance, account) in state.balances">
+        <td>{{account}}</td>
+        <td>£{{balance}}</td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -12,7 +23,12 @@
     name: 'app',
     data: function () {
       return {
-        name: ''
+        state: {
+          name: 'Init',
+          balances: {
+            "John": "100.00"
+          }
+        }
       }
     },
     mounted() {
@@ -25,8 +41,9 @@
       onOpen() {
         console.log('braid connected', this.proxy);
         this.proxy.bank.getInitialState()
-          .then(result => {
-            console.log("initial state", result);
+          .then(state => {
+            console.log("initial state", state);
+            this.state = state;
           })
           .catch(err => {
             console.log("failed to get initial state", err);
@@ -40,17 +57,6 @@
       },
     }
   }
-
-  function parseX509Name(name) {
-    return name.split(',')
-      .map(it => it.trim())
-      .map(it => it.split('='))
-      .reduce((obj, pair) => {
-        obj[pair[0]] = pair[1];
-        return obj;
-      }, {});
-  }
-
 </script>
 
 <style>
