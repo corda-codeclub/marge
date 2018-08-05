@@ -8,6 +8,7 @@ import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
 import net.corda.core.utilities.loggerFor
 import net.cordaclub.marge.Initializer
+import net.cordaclub.marge.Insurers
 import net.cordaclub.marge.Patient
 import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
@@ -29,13 +30,13 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
             initialised = true
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
-            val insurers = serviceHub.networkMapCache.allNodes.flatMap { it.legalIdentities }.map { it.name }
+            serviceHub.networkMapCache.allNodes.flatMap { it.legalIdentities }.map { it.name }
                 .filter { it.organisation.contains("insurer", true) }
 
             val hospitals = serviceHub.networkMapCache.allNodes.flatMap { it.legalIdentities }.map { it.name }
                 .filter { it.organisation.contains("hospital", true) }
 
-            val totalOtherPartyTransfers = insurers.size * 1_000_000 + hospitals.size * 500_000
+            val totalOtherPartyTransfers = Insurers.allInsurers.size * 1_000_000 + hospitals.size * 500_000
             ledger.createTokenType(TOKEN_SYMBOL, 2, notary.name)
                 .onSuccess { TOKEN_TYPE_URI = it.descriptor.uri }
                 .compose { ledger.createAccount(BANK_ISSUANCE_ACCOUNT, notary.name) }
@@ -66,7 +67,7 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
                 }
                 .compose {
                     // transfer funds to the insurers
-                    insurers.fold(Future.succeededFuture<Unit>()) { acc, insurer ->
+                    Insurers.allInsurers.fold(Future.succeededFuture<Unit>()) { acc, insurer ->
                         val insurerAccount = AccountAddress(InsurerAPI.INSURER_ACCOUNT, insurer).toString()
                         acc.compose {
                             ledger.transferToken(

@@ -80,7 +80,7 @@ class DemoService(private val serviceHub: AppServiceHub) : SingletonSerializeAsT
     private fun configureInsurer() {
         service = InsurerAPI(serviceHub)
         val name = serviceHub.myInfo.legalIdentities.first().name
-        val port = 8000 + allInsurers.indexOf(name) + name.organisation.hashCode() % 2
+        port = 8000 + allInsurers.indexOf(name) + name.organisation.hashCode() % 2
         log.info("Starting Insurer $name on port http://localhost:$port")
         val static = StaticHandler.create("web/insurer").setCachingEnabled(false)
         val router = Routers.create(vertx, port)
