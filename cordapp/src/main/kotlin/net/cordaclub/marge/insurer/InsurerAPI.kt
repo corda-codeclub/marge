@@ -1,16 +1,12 @@
 package net.cordaclub.marge.insurer
 
 import io.bluebank.braid.core.async.getOrThrow
-import io.cordite.dgl.corda.account.CreateAccountFlow
 import io.cordite.dgl.corda.account.GetAccountFlow
 import io.cordite.dgl.corda.impl.LedgerApiImpl
 import io.vertx.core.Future
 import net.corda.core.node.AppServiceHub
 import net.corda.core.utilities.getOrThrow
 import net.cordaclub.marge.Initializer
-import net.cordaclub.marge.hospital.HospitalAPI
-import net.cordaclub.marge.util.onSuccess
-import net.cordaclub.marge.util.toEasyFuture
 
 class InsurerAPI(private val serviceHub: AppServiceHub) : Initializer(){
     companion object {

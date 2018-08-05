@@ -39,6 +39,7 @@
         console.log('braid connected', this.proxy);
         this.proxy.hospital.getInitialState()
           .then(state => {
+            console.log(state.balances[0]);
             this.state = state;
             this.loading = false
           })

@@ -28,6 +28,25 @@ fun <V> Future<V>.onSuccess(fn: (V) -> Unit) : Future<V> {
             } catch (err: Throwable) {
                 result.fail(err)
             }
+        } else {
+            result.fail(cause())
+        }
+    }
+    return result
+}
+
+fun <V> Future<V>.onFail(fn: (Throwable) -> Unit) : Future<V> {
+    val result = Future.future<V>()
+    this.setHandler {
+        if (failed()) {
+            try {
+                fn(cause())
+                result.fail(cause())
+            } catch (err: Throwable) {
+                result.fail(err)
+            }
+        } else {
+            result.complete(result())
         }
     }
     return result

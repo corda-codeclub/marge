@@ -3,14 +3,12 @@ package net.cordaclub.marge
 import co.paralleluniverse.fibers.Suspendable
 import io.cordite.dgl.corda.account.Account
 import io.cordite.dgl.corda.account.GetAccountFlow
-import io.cordite.dgl.corda.impl.LedgerApiImpl
 import io.cordite.dgl.corda.token.TokenType
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
