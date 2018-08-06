@@ -14,8 +14,14 @@ import net.corda.core.utilities.unwrap
 import java.util.*
 
 object InsurerQuotingFlows {
+
     /**
-     * This is run by the Hospital when raising a claim
+     * First flow!
+     * This is run by the Hospital when starting a treatment.
+     *
+     * 1) Creates the [TreatmentState] state that will evolve as the real treatment progresses.
+     * 2) Requests quotes from Insurers.
+     * 3) Selects the best quote and binds it in a transaction with the insurer.
      */
     @StartableByRPC
     @StartableByService
@@ -28,6 +34,9 @@ object InsurerQuotingFlows {
 
         @Suspendable
         override fun call(): SignedTransaction {
+
+            // Create and sign the Treatment State that will be used to justify the redemption of the Quote, and payment from the patient.
+            val issueTreatmentTx = estimateTreatmentState()
 
             // Collect quotes from each insurer and select the best for the committed quote.
             val quotes = insurers.map { insurer ->
@@ -46,20 +55,52 @@ object InsurerQuotingFlows {
             }
             val bestQuote = quotes.first()
             bestQuote.second.send(QuoteStatus.ACCEPTED_QUOTE)
-            return createTransactionSignAndCommit(bestQuote.first, bestQuote.second)
+            return createTransactionSignAndCommit(bestQuote.first, bestQuote.second, issueTreatmentTx)
         }
 
         @Suspendable
-        private fun createTransactionSignAndCommit(amount: Amount<Currency>, session: FlowSession): SignedTransaction {
+        private fun createTransactionSignAndCommit(amount: Amount<Currency>, session: FlowSession, treatmentTx: SignedTransaction): SignedTransaction {
             val insurer = session.counterparty
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
+            val treatment = treatmentTx.coreTransaction.outRef<TreatmentState>(0)
             val txb = TransactionBuilder(notary).apply {
-                addCommand(Command(InsurerQuoteCommand.IssueQuote(), listOf(insurer.owningKey, ourIdentity.owningKey)))
-                addOutputState(InsurerQuoteState(treatmentCoverageEstimation, insurer, amount), InsurerQuoteContract.CONTRACT_ID, notary)
+                addCommand(Command(TreatmentCommand.QuoteTreatment(), listOf(insurer.owningKey, ourIdentity.owningKey)))
+                addInputState(treatment)
+                addOutputState(treatment.state.copy(data = treatment.state.data.let {
+                    TreatmentState(
+                            treatment = it.treatment,
+                            estimatedTreatmentCost = treatmentCoverageEstimation.estimatedAmount,
+                            treatmentCost = null,
+                            amountPayed = null,
+                            insurerQuote = InsurerQuote(insurer, amount),
+                            treatmentStatus = TreatmentStatus.QUOTED,
+                            linearId = it.linearId
+                    )
+                }))
             }
             val stx = serviceHub.signInitialTransaction(txb) // hospital signs the transaction
             val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))
             return subFlow(FinalityFlow(fullySignedTransaction))
+        }
+
+        @Suspendable
+        private fun estimateTreatmentState(): SignedTransaction {
+            val notary = serviceHub.networkMapCache.notaryIdentities.first()
+            val txb = TransactionBuilder(notary).apply {
+                addCommand(Command(TreatmentCommand.EstimateTreatment(), listOf(ourIdentity.owningKey)))
+                addOutputState(
+                        TreatmentState(
+                                treatment = treatmentCoverageEstimation.treatment,
+                                estimatedTreatmentCost = treatmentCoverageEstimation.estimatedAmount,
+                                treatmentCost = null,
+                                amountPayed = null,
+                                insurerQuote = null,
+                                treatmentStatus = TreatmentStatus.ESTIMATED),
+                        TreatmentContract.CONTRACT_ID, notary)
+            }
+            val stx = serviceHub.signInitialTransaction(txb)
+
+            return subFlow(FinalityFlow(stx))
         }
     }
 
@@ -93,7 +134,7 @@ object InsurerQuotingFlows {
                 val signTransactionFlow = object : SignTransactionFlow(session, SignTransactionFlow.tracker()) {
                     override fun checkTransaction(stx: SignedTransaction) = requireThat {
                         stx.verify(serviceHub, checkSufficientSignatures = false) // verify the transaction - we set checkSufficientSignatures to false because we don't sign until this stage is complete
-                        "the claim in the proposed output state matches the one we had received" using (stx.tx.outputsOfType<InsurerQuoteState>().first().request == treatment)
+//                        "the claim in the proposed output state matches the one we had received" using (stx.tx.outputsOfType<InsurerQuoteState>().first().request == treatment)
                     }
                 }
                 // we invoke the sign Transaction flow which in turn awaits the CollectSignaturesFlow above

@@ -50,16 +50,17 @@ fun main(args: Array<String>) {
         val estimation = TreatmentCoverageEstimation(treatment, 1000.POUNDS)
 
         val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, insurers.map { it.nodeInfo.legalIdentities.first() }).returnValue.getOrThrow()
-        val quote = estimationTx.coreTransaction.outRefsOfType<InsurerQuoteState>()[0]
+        val treatmentState = estimationTx.coreTransaction.outRefsOfType<TreatmentState>()[0]
+        val quote = treatmentState.state.data.insurerQuote!!
 
-        println("Successfully got quote: ${quote.state.data.maxCoveredValue} from: ${quote.state.data.insurer}")
+        println("Successfully got quote: ${quote.maxCoveredValue} from: ${quote.insurer}")
 
         hospital.rpc.vaultTrack(TreatmentState::class.java).updates.subscribe { vaultUpdate ->
             println("Produced: ${vaultUpdate.produced}")
             println("Consumed: ${vaultUpdate.consumed}")
         }
 
-        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatment, 1500.POUNDS, quote).returnValue.getOrThrow()
+        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 1500.POUNDS).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
 

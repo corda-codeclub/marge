@@ -19,13 +19,11 @@ import net.cordaclub.marge.hospital.HospitalAPI
 import net.cordaclub.marge.insurer.InsurerAPI
 import java.util.*
 
-object InsurerFlows{
+object InsurerFlows {
 
     @CordaSerializable
     data class InsurerPaymentPayload(
-            val outputTreatmentState: TreatmentState?,
             val amountToPay: Amount<Currency>,
-            val insurerQuoteState: StateAndRef<InsurerQuoteState>,
             val hospitalAccount: Account.State
     )
 
@@ -33,27 +31,22 @@ object InsurerFlows{
      * Triggered by the hospital to collect money from the insurer
      */
     @InitiatingFlow
-    class InsurerTreatmentPaymentFlow(
-            private val insurerQuoteState: StateAndRef<InsurerQuoteState>,
-            private val treatmentState: StateAndRef<TreatmentState>,
-            private val insuranceAmount: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+    class InsurerTreatmentPaymentFlow(private val treatmentState: StateAndRef<TreatmentState>, private val hospitalAccount: Account.State) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
+            val treatment = treatmentState.state.data
+
             // create a tx with the insurer to (partially) settle the cost of the treatment
-            val insurerSession = initiateFlow(insurerQuoteState.state.data.insurer)
-
-            val inputTreatmentState = treatmentState.state.data
-            val remaining = inputTreatmentState.treatmentCost - insuranceAmount
-
-            // if the treatment is not paid in fully by the insurer, a new TreatmentState is created to be payed by the patient
-            val outputTreatmentState = if (remaining.quantity == 0L) null else TreatmentState(inputTreatmentState.treatment, remaining, linearId = inputTreatmentState.linearId)
+            val insurerSession = initiateFlow(treatment.insurerQuote!!.insurer)
 
             subFlow(SendStateAndRefFlow(insurerSession, listOf(treatmentState)))
 
             // send the [InsurerPaymentPayload] and receive the transaction containing the payment
-            val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT))
-            insurerSession.send(InsurerPaymentPayload(outputTreatmentState, insuranceAmount, insurerQuoteState, hospitalAccount.state.data))
+            // The amount to be paid by the insurer
+            val insuranceAmount = min(treatment.treatmentCost!!, treatment.insurerQuote!!.maxCoveredValue)
+
+            insurerSession.send(InsurerPaymentPayload(insuranceAmount, hospitalAccount))
 
             val tx = subFlow(object : SignTransactionFlow(insurerSession) {
                 override fun checkTransaction(stx: SignedTransaction) {
@@ -72,25 +65,31 @@ object InsurerFlows{
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
             val treatmentState = subFlow(ReceiveStateAndRefFlow<TreatmentState>(session)).single()
+            val treatment = treatmentState.state.data
 
             val insurerPaymentPayload = session.receive<InsurerPaymentPayload>().unwrap { it }
 
             //Build transaction
             val txb = TransactionBuilder(notary).apply {
-                addCommand(Command(InsurerQuoteCommand.RedeemQuote(), listOf(ourIdentity.owningKey)))
-                addCommand(Command(TreatmentCommand.PayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
-                addInputState(insurerPaymentPayload.insurerQuoteState)
+                addCommand(Command(TreatmentCommand.CollectInsurerPay(), listOf(hospital.owningKey, ourIdentity.owningKey)))
                 addInputState(treatmentState)
-                insurerPaymentPayload.outputTreatmentState?.let { addOutputState(it, TreatmentContract.CONTRACT_ID, notary) }
+                addOutputState(treatmentState.state.copy(data = treatment.let {
+                    TreatmentState(
+                            treatment = it.treatment,
+                            estimatedTreatmentCost = it.estimatedTreatmentCost,
+                            treatmentCost = it.treatmentCost,
+                            amountPayed = insurerPaymentPayload.amountToPay,
+                            insurerQuote = it.insurerQuote,
+                            treatmentStatus = TreatmentStatus.PARTIALLY_PAYED,
+                            linearId = it.linearId
+                    )
+                }))
             }
 
-            //todo Fuzz - pls review
             // select treatmentCost tokens from the insurer account and pay them to the hospital
-            val treatment = treatmentState.state.data
-            val toPay = treatment.treatmentCost
             val insurerAccount = subFlow(GetAccountFlow(InsurerAPI.INSURER_ACCOUNT)).state.data
             val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
-                    txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, toPay.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
+                    txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, insurerPaymentPayload.amountToPay!!.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
 
             val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
             val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))

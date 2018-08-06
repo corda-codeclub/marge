@@ -16,15 +16,13 @@ object PatientFlows {
      * Triggered by the hospital to collect money from the patient's bank
      */
     @InitiatingFlow
-    class PatientTreatmentPaymentFlow(private val paymentFromInsurerTx: SignedTransaction) : FlowLogic<SignedTransaction>() {
+    class PatientTreatmentPaymentFlow(private val paymentFromInsurerTx: SignedTransaction, private val hospitalAccount: Account.State) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             // create a tx with the patient's bank to settle the rest
             val bankSession = initiateFlow(getBank(serviceHub))
             val treatmentState = paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().first()
             subFlow(SendStateAndRefFlow(bankSession, listOf(treatmentState)))
-
-            val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data
             bankSession.send(hospitalAccount)
 
             val tx = subFlow(object : SignTransactionFlow(bankSession) {
@@ -47,17 +45,29 @@ object PatientFlows {
 
             val hospitalAccount = session.receive<Account.State>().unwrap { it }
 
+            val treatment = treatmentState.state.data
+            val toPay = treatment.treatmentCost!! - treatment.amountPayed!!
+
             //Build transaction
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
             val txb = TransactionBuilder(notary).apply {
-                addCommand(Command(TreatmentCommand.PayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
+                addCommand(Command(TreatmentCommand.FullyPayTreatment(), listOf(hospital.owningKey, ourIdentity.owningKey)))
                 addInputState(treatmentState)
+                addOutputState(treatmentState.state.copy(data = treatmentState.state.data.let {
+                    TreatmentState(
+                            treatment = it.treatment,
+                            estimatedTreatmentCost = it.estimatedTreatmentCost,
+                            treatmentCost = it.treatmentCost,
+                            amountPayed = it.treatmentCost,
+                            insurerQuote = it.insurerQuote,
+                            treatmentStatus = TreatmentStatus.FULLY_PAYED,
+                            linearId = it.linearId
+                    )
+                }))
             }
 
             //todo Fuzz - pls review
             // select treatmentCost tokens from the patient account and pay them to the hospital
-            val treatment = treatmentState.state.data
-            val toPay = treatment.treatmentCost
             val patientAccount = subFlow(GetAccountFlow(treatment.treatment.patient.name)).state.data
             val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
                     txb, patientAccount.address, hospitalAccount.address, toPay.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
