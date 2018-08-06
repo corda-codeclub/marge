@@ -3,12 +3,19 @@
   <v-app id="app" v-bind:class="{loading: loading}">
     <v-toolbar app>
       <div class="org-name">{{state.name}}</div>
-      <br>
-      <div><label>Balance: £</label><span>{{state.balance}}</span></div>
     </v-toolbar>
+    <v-navigation-drawer
+        v-model="drawer"
+        fixed
+        app
+    >
+      <div class="display-2">Balance</div>
+      <div class="display-1">£ {{state.balance}}</div>
+      <v-divider></v-divider>
+    </v-navigation-drawer>
     <v-content>
       <v-container fluid>
-        <v-btn color="red lighten-2" dark @click="createTreatment">Create Treatments!!</v-btn>
+        <v-btn color="red lighten-2" dark @click="createTreatment">Create Treatments</v-btn>
 
         <div>
           <div v-cloak>
