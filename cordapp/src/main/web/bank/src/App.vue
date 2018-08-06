@@ -72,4 +72,8 @@
   .org-name {
     font-size: 40px;
   }
+
+  table {
+    font-size: 40px;
+  }
 </style>

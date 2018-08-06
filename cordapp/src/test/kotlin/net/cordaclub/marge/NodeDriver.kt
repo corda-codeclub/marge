@@ -44,26 +44,26 @@ fun main(args: Array<String>) {
         }.onFail { err ->
             log.error("failed to initalise nodes", err)
         }
-
-        val patient = Patients.allPatients.first()
-        val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
-        val estimation = TreatmentCoverageEstimation(treatment, 100.POUNDS)
-
-        val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, insurers.map { it.nodeInfo.legalIdentities.first() }).returnValue.getOrThrow()
-        val treatmentState = estimationTx.coreTransaction.outRefsOfType<TreatmentState>()[0]
-        val quote = treatmentState.state.data.insurerQuote!!
-
-        Thread.sleep(5000)
-        println("Successfully got quote: ${quote.maxCoveredValue} from: ${quote.insurer}")
-
-        hospital.rpc.vaultTrack(TreatmentState::class.java).updates.subscribe { vaultUpdate ->
-            println("Produced: ${vaultUpdate.produced}")
-            println("Consumed: ${vaultUpdate.consumed}")
-        }
-
-        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 150.POUNDS).returnValue.getOrThrow()
-
-        println("Successfully payed for the treatment.")
+//
+//        val patient = Patients.allPatients.first()
+//        val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
+//        val estimation = TreatmentCoverageEstimation(treatment, 100.POUNDS)
+//
+//        val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, insurers.map { it.nodeInfo.legalIdentities.first() }).returnValue.getOrThrow()
+//        val treatmentState = estimationTx.coreTransaction.outRefsOfType<TreatmentState>()[0]
+//        val quote = treatmentState.state.data.insurerQuote!!
+//
+//        Thread.sleep(5000)
+//        println("Successfully got quote: ${quote.maxCoveredValue} from: ${quote.insurer}")
+//
+//        hospital.rpc.vaultTrack(TreatmentState::class.java).updates.subscribe { vaultUpdate ->
+//            println("Produced: ${vaultUpdate.produced}")
+//            println("Consumed: ${vaultUpdate.consumed}")
+//        }
+//
+//        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 150.POUNDS).returnValue.getOrThrow()
+//
+//        println("Successfully payed for the treatment.")
     }
 }
 
