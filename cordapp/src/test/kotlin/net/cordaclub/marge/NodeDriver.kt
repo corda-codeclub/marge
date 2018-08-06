@@ -53,6 +53,7 @@ fun main(args: Array<String>) {
         val treatmentState = estimationTx.coreTransaction.outRefsOfType<TreatmentState>()[0]
         val quote = treatmentState.state.data.insurerQuote!!
 
+        Thread.sleep(5000)
         println("Successfully got quote: ${quote.maxCoveredValue} from: ${quote.insurer}")
 
         hospital.rpc.vaultTrack(TreatmentState::class.java).updates.subscribe { vaultUpdate ->
