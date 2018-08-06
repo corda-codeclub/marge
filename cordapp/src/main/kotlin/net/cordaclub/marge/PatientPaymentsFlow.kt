@@ -66,7 +66,6 @@ object PatientFlows {
                 }))
             }
 
-            //todo Fuzz - pls review
             // select treatmentCost tokens from the patient account and pay them to the hospital
             val patientAccount = subFlow(GetAccountFlow(treatment.treatment.patient.name)).state.data
             val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(

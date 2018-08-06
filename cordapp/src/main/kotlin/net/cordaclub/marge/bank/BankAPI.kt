@@ -71,7 +71,7 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
                         val insurerAccount = AccountAddress(InsurerAPI.INSURER_ACCOUNT, insurer).toString()
                         acc.compose {
                             ledger.transferToken(
-                                "1000000.0",
+                                "1000000.00",
                                 TOKEN_TYPE_URI,
                                 BANK_ISSUANCE_ACCOUNT,
                                 insurerAccount,
@@ -87,7 +87,7 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
                         val hospitalAccount = AccountAddress(HospitalAPI.HOSPITAL_ACCOUNT, hospital).toString()
                         acc.compose {
                             ledger.transferToken(
-                                "500000.0",
+                                "500000.00",
                                 TOKEN_TYPE_URI,
                                 BANK_ISSUANCE_ACCOUNT,
                                 hospitalAccount,

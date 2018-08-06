@@ -111,4 +111,4 @@ fun getBank(serviceHub: ServiceHub) = serviceHub.networkMapCache.allNodes.find {
 fun Amount<Currency>.toToken(issuer: Party): Amount<TokenType.Descriptor> = Amount(
         quantity = this.quantity,
         displayTokenSize = this.displayTokenSize,
-        token = TokenType.Descriptor("GBP", 1, issuer.name))
+        token = TokenType.Descriptor("GBP", 2, issuer.name))
