@@ -6,14 +6,14 @@
     </v-toolbar>
     <v-navigation-drawer fixed app>
       <div class="display-2">Balance</div>
-      <div class="display-1">£ {{state.balance}}</div>
+      <div class="display-1">£ {{balance}}</div>
       <v-divider></v-divider>
       <v-btn color="green lighten-1" dark @click="createTreatment">Create Treatment</v-btn>
     </v-navigation-drawer>
     <v-content>
       <v-container fluid>
         <v-card>
-          <v-list two-line>
+          <v-list three-line>
             <template v-for="(item, key) in treatments">
               <v-list-tile
                   :key="key"
@@ -29,6 +29,12 @@
                   <v-list-tile-sub-title>{{item.treatment.description}}</v-list-tile-sub-title>
                   <v-list-tile-sub-title>{{item.treatmentStatus}}</v-list-tile-sub-title>
                 </v-list-tile-content>
+              </v-list-tile>
+              <v-list-tile>
+                <v-list-tile-sub-title>£{{amountToString(item.estimatedTreatmentCost)}} covered up to
+                  £{{amountToString(item.insurerQuote.maxCoveredValue)}} by
+                  {{organisationFromParty(item.insurerQuote.insurer)}}
+                </v-list-tile-sub-title>
               </v-list-tile>
               <v-list-tile v-if="item.treatmentStatus=='QUOTED'">
                 <v-btn color="blue lighten-1" dark @click="requestPayment(key)">Request Payment</v-btn>
@@ -110,9 +116,7 @@
           name: '',
           patients: [],
           balance: "0.00",
-          treatments: {
-
-          }
+          treatments: {}
         },
         loading: true
       }
@@ -127,16 +131,22 @@
       patientNames: function () {
         return this.state.patients.map(patient => patient.name)
       },
-      treatments: function() {
+      treatments: function () {
         if (this.newStateChange > 0) {
           return this.state.treatments;
+        }
+      },
+      balance: function () {
+        if (this.newStateChange > 0) {
+          return this.state.balance;
         }
       }
     },
     methods: {
       onOpen() {
         console.log('braid connected', this.proxy);
-        this.proxy.hospital.listenForTreatments(update => this.onTreatments(update), error => this.onTreatmentsError(error), () => {})
+        this.proxy.hospital.listenForTreatments(update => this.onTreatments(update), error => this.onTreatmentsError(error), () => {
+        })
         this.proxy.hospital.getInitialState()
           .then(state => {
             console.log(state);
@@ -161,9 +171,15 @@
         this.proxy.hospital.processTreatmentRequest(this.newTreatment)
           .then(result => {
             console.log("treatment submitted and we received", result);
-          }).catch(err => {
+          })
+          .catch(err => {
             console.error("failed during sending of treatment", err);
           });
+        this.newTreatment = {
+          name: "",
+          description: "",
+          amount: ""
+        };
       },
       onTreatments(treatments) {
         treatments.forEach(treatment => {
@@ -172,6 +188,7 @@
           this.newStateChange += 1;
         });
         console.log(treatments);
+        window.setTimeout(this.updateBalance, 500);
       },
       onTreatmentsError(error) {
         console.log(error);
@@ -185,6 +202,33 @@
           .catch(err => {
             console.error("failed to be paid");
           });
+      },
+      updateBalance() {
+        this.proxy.ledger.balanceForAccount('hospital')
+          .then(result => {
+            const balance = result[0].quantity / 100;
+            this.state.balance = (result[0].quantity / 100).toFixed(2);
+            this.newStateChange += 1;
+            console.log("balance", result);
+          })
+          .catch(err => {
+            console.error("failure to get balance", err);
+          })
+      },
+      amountToString(amount) {
+        return (amount.quantity / 100).toFixed(2);
+      },
+      organisationFromParty(party) {
+        return this.parseX509Name(party.name).O;
+      },
+      parseX509Name(name) {
+        return name.split(',')
+          .map(it => it.trim())
+          .map(it => it.split('='))
+          .reduce((obj, pair) => {
+            obj[pair[0]] = pair[1];
+            return obj;
+          }, {});
       }
     }
   }

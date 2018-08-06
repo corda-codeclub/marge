@@ -5,7 +5,6 @@ import io.cordite.dgl.corda.account.AccountAddress
 import io.cordite.dgl.corda.account.GetAccountFlow
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions.Companion.prepareTokenMoveWithSummary
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
@@ -67,7 +66,7 @@ object PatientFlows {
                             treatmentCost = it.treatmentCost,
                             amountPayed = it.treatmentCost,
                             insurerQuote = it.insurerQuote,
-                            treatmentStatus = TreatmentStatus.FULLY_PAYED,
+                            treatmentStatus = TreatmentStatus.FULLY_PAID,
                             linearId = it.linearId
                     )
                 }))

@@ -7,7 +7,6 @@ import io.cordite.dgl.corda.token.TokenType
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions.Companion.prepareTokenMoveWithSummary
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -80,7 +79,7 @@ object InsurerFlows {
                             treatmentCost = it.treatmentCost,
                             amountPayed = insuranceAmount,
                             insurerQuote = it.insurerQuote,
-                            treatmentStatus = TreatmentStatus.PARTIALLY_PAYED,
+                            treatmentStatus = TreatmentStatus.PARTIALLY_PAID,
                             linearId = it.linearId
                     )
                 }))

@@ -34,7 +34,7 @@ data class InsurerQuote(
 
 @CordaSerializable
 enum class TreatmentStatus {
-    ESTIMATED, QUOTED, FINALISED, PARTIALLY_PAYED, FULLY_PAYED
+    ESTIMATED, QUOTED, FINALISED, PARTIALLY_PAID, FULLY_PAID
 }
 
 /**
@@ -101,13 +101,13 @@ class TreatmentContract : Contract {
                 }
                 is TreatmentCommand.CollectInsurerPay -> {
                     "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.FINALISED)
-                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.PARTIALLY_PAYED)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.PARTIALLY_PAID)
                     "The amount payed is less than the cost" using (outputTreatment.amountPayed!! <= outputTreatment.treatmentCost!!)
                     "The amount payed is correct" using (outputTreatment.amountPayed!! == min(outputTreatment.insurerQuote!!.maxCoveredValue, outputTreatment.treatmentCost))
                 }
                 is TreatmentCommand.FullyPayTreatment -> {
-                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.PARTIALLY_PAYED)
-                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.FULLY_PAYED)
+                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.PARTIALLY_PAID)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.FULLY_PAID)
                     "There is nothing left to pay" using (outputTreatment.amountPayed!! == outputTreatment.treatmentCost!!)
                 }
             }
