@@ -15,7 +15,7 @@
     </v-navigation-drawer>
     <v-content>
       <v-container fluid>
-        <v-btn color="red lighten-2" dark @click="createTreatment">Create Treatments</v-btn>
+        <v-btn color="red lighten-2" dark @click="createTreatment">Create Treatment</v-btn>
 
         <div>
           <div v-cloak>
@@ -55,6 +55,12 @@
                 >{{newTreatment.description}}
                 </v-text-field>
               </v-flex>
+              <v-flex xs12>
+                <v-text-field
+                    v-model="newTreatment.amount"
+                    label="Estimated Amount"
+                ></v-text-field>
+              </v-flex>
             </v-layout>
 
             <v-divider></v-divider>
@@ -87,7 +93,8 @@
         treatmentDialog: false,
         newTreatment: {
           name: "",
-          description: ""
+          description: "",
+          amount: ""
         },
         state: {
           name: '',
@@ -131,11 +138,13 @@
       },
       sendTreatment() {
         this.treatmentDialog = false;
-        console.log(this.newTreatment);
+        console.log("submitting treatment", this.newTreatment);
         this.proxy.hospital.processTreatmentRequest(this.newTreatment)
           .then(result => {
-            console.log("treatment sent", result);
-          }).catch(err => console.error("failed during sending of treatment", err));
+            console.log("treatment submitted and we received", result);
+          }).catch(err => {
+            console.error("failed during sending of treatment", err);
+          });
       }
     }
   }
