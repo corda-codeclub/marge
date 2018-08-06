@@ -2,6 +2,7 @@
   <div id="app">
     <img src="./assets/logo.png">
     <div class="org-name">{{name}}</div>
+    <div class="org-name">Balance £{{balance}}</div>
   </div>
 </template>
 
@@ -12,7 +13,8 @@
     name: 'app',
     data: function () {
       return {
-        name: ''
+        name: '',
+        balance: '0.00'
       }
     },
     mounted() {
@@ -30,6 +32,12 @@
       },
       onOpen() {
         console.log('braid connected', this.proxy);
+        this.proxy.ledger.balanceForAccount('insurer')
+          .then(result => {
+            this.balance = (result[0].quantity / 100).toFixed(2);
+          })
+          .catch(err => console.error(err));
+
         this.proxy.insurer.initialiseDemo()
           .then((result, err) => {
             if (err != null) {
