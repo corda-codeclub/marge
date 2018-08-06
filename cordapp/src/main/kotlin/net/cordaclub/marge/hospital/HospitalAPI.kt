@@ -85,13 +85,14 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
         return serviceHub.listenForTreatments()
     }
 
-    fun requestPayment(id: String) : Future<Unit> {
+    fun requestPayment(id: String, amount: Long) : Future<Unit> {
         val criteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(UniqueIdentifier(id = UUID.fromString(id))))
         val treatmentStateAndRef = serviceHub.transaction {
             val results = serviceHub.vaultService.queryBy<TreatmentState>(criteria)
             results.states.first()
         }
-        val flow = TriggerTreatmentPaymentsFlow(treatmentStateAndRef, treatmentStateAndRef.state.data.estimatedTreatmentCost)
+        val actualAmount = Amount(amount, GBP)
+        val flow = TriggerTreatmentPaymentsFlow(treatmentStateAndRef, actualAmount)
         return serviceHub.startFlow(flow).toEasyFuture().mapEmpty<Unit>()
     }
 }

@@ -37,6 +37,8 @@
                 </v-list-tile-sub-title>
               </v-list-tile>
               <v-list-tile v-if="item.treatmentStatus=='QUOTED'">
+                <v-text-field v-model="actualAmount" label="Actual Amount"
+                              placeholder="enter actual amount"></v-text-field>
                 <v-btn color="blue lighten-1" dark @click="requestPayment(key)">Request Payment</v-btn>
               </v-list-tile>
               <v-divider></v-divider>
@@ -112,6 +114,7 @@
           description: "",
           amount: ""
         },
+        actualAmount: "0.00",
         state: {
           name: '',
           patients: [],
@@ -194,13 +197,14 @@
         console.log(error);
       },
       requestPayment(id) {
-        console.log("requesting payment for", id);
-        this.proxy.hospital.requestPayment(id)
+        console.log("requesting payment for", id, this.actualAmount);
+        const val = parseFloat(this.actualAmount) * 100;
+        this.proxy.hospital.requestPayment(id, val)
           .then(result => {
             console.log("paid!"); // we'll get the notification later
           })
           .catch(err => {
-            console.error("failed to be paid");
+            console.error("failed to be paid", err);
           });
       },
       updateBalance() {
