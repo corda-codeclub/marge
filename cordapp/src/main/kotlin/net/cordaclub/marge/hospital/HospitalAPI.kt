@@ -48,6 +48,12 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
                 )
             }
     }
+
+    fun processTreatmentRequest(treatmentRequest: TreatmentRequest) : Future<Unit> {
+        // TODO: implement
+        return Future.succeededFuture()
+    }
 }
 
 data class HospitalInitialState(val name: String, val patients: List<Patient>, val balance: String)
+data class TreatmentRequest(val name: String, val description: String)
