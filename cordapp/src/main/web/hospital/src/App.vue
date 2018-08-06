@@ -14,22 +14,27 @@
       <v-container fluid>
         <v-card>
           <v-list two-line>
-            <v-list-tile
-                v-for="(item, key) in treatments"
-                :key="key"
-                avatar
-                @click=""
-            >
-              <v-list-tile-action>
-                <v-icon color="pink">star</v-icon>
-              </v-list-tile-action>
+            <template v-for="(item, key) in treatments">
+              <v-list-tile
+                  :key="key"
+                  avatar
+                  @click=""
+              >
+                <v-list-tile-action>
+                  <v-icon color="pink">credit_card</v-icon>
+                </v-list-tile-action>
 
-              <v-list-tile-content>
-                <v-list-tile-title>{{item.treatment.patient.name}}</v-list-tile-title>
-                <v-list-tile-sub-title>{{item.treatment.description}}</v-list-tile-sub-title>
-                <v-list-tile-sub-title>{{item.treatmentStatus}}</v-list-tile-sub-title>
-              </v-list-tile-content>
-            </v-list-tile>
+                <v-list-tile-content>
+                  <v-list-tile-title>{{item.treatment.patient.name}}</v-list-tile-title>
+                  <v-list-tile-sub-title>{{item.treatment.description}}</v-list-tile-sub-title>
+                  <v-list-tile-sub-title>{{item.treatmentStatus}}</v-list-tile-sub-title>
+                </v-list-tile-content>
+              </v-list-tile>
+              <v-list-tile v-if="item.treatmentStatus=='QUOTED'">
+                <v-btn color="blue lighten-1" dark @click="requestPayment">Request Payment</v-btn>
+              </v-list-tile>
+              <v-divider></v-divider>
+            </template>
           </v-list>
         </v-card>
       </v-container>
