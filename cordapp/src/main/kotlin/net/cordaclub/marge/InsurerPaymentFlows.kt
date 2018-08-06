@@ -16,6 +16,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.unwrap
+import net.cordaclub.marge.bank.BankAPI.Companion.TOKEN_SYMBOL
 import net.cordaclub.marge.insurer.InsurerAPI
 import java.util.*
 
@@ -108,4 +109,4 @@ fun getBank(serviceHub: ServiceHub) = serviceHub.networkMapCache.allNodes.find {
 fun Amount<Currency>.toToken(issuer: Party): Amount<TokenType.Descriptor> = Amount(
         quantity = this.quantity,
         displayTokenSize = this.displayTokenSize,
-        token = TokenType.Descriptor("GBP", 2, issuer.name))
+        token = TokenType.Descriptor(TOKEN_SYMBOL, 2, issuer.name))

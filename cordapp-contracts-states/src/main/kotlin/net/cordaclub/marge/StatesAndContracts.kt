@@ -108,7 +108,7 @@ class TreatmentContract : Contract {
                 is TreatmentCommand.FullyPayTreatment -> {
                     "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.PARTIALLY_PAYED)
                     "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.FULLY_PAYED)
-                    "There is nothing left to pay" using (outputTreatment.amountPayed!!.quantity == 0L)
+                    "There is nothing left to pay" using (outputTreatment.amountPayed!! == outputTreatment.treatmentCost!!)
                 }
             }
         }

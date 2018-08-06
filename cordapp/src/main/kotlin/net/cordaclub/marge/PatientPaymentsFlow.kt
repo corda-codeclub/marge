@@ -31,7 +31,7 @@ object PatientFlows {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val tx = stx.coreTransaction.outputsOfType<TreatmentState>().single()
                     stx.verify(serviceHub, checkSufficientSignatures = false)
-                    "The payment is correct." using (tx.amountPayed!!.quantity == 0L)
+                    "The treatment is payed in full." using (tx.amountPayed!! == tx.treatmentCost!!)
                     //todo - check that the correct tokens were added
                 }
             })
