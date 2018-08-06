@@ -1,6 +1,7 @@
 package net.cordaclub.marge
 
 import co.paralleluniverse.fibers.Suspendable
+import io.cordite.dgl.corda.account.GetAccountFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
@@ -8,47 +9,57 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
-import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.cordaclub.marge.hospital.HospitalAPI
 import java.util.*
 
 /**
+ * Second Flow!
  * This is run by the Hospital when the treatment is over.
- * It will self sign a TreatmentState and then run sub-flows to collect the payment from the Insurer and maybe the Patient.
+ *
+ * 1) It will evolve the TreatmentSate
+ * 2) It will requests payments from the insurer and patient
  */
 @StartableByRPC
 @StartableByService
-class TriggerTreatmentPaymentsFlow(private val treatment: Treatment, private val treatmentCost: Amount<Currency>, private val insurerQuoteState: StateAndRef<InsurerQuoteState>) : FlowLogic<Unit>() {
+class TriggerTreatmentPaymentsFlow(private val treatmentState: StateAndRef<TreatmentState>, private val realTreatmentCost: Amount<Currency>) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-        // Create and sign the Treatment State that will be used to justify the redemption of the Quote, and payment from the patient.
-        val issueTreatmentTx = issueTreatmentState(insurerQuoteState.state.data.insurer)
 
-        val treatmentState = issueTreatmentTx.coreTransaction.outRef<TreatmentState>(0)
+        //todo check the state
+        val finalisedTreatment = finaliseTreatment()
+        val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data
 
-        // The amount to be paid by the insurer
-        val insuranceAmount = min(treatmentCost, insurerQuoteState.state.data.maxCoveredValue)
-
-        val paymentFromInsurerTx = subFlow(InsurerFlows.InsurerTreatmentPaymentFlow(insurerQuoteState, treatmentState, insuranceAmount))
+        val paymentFromInsurerTx = subFlow(InsurerFlows.InsurerTreatmentPaymentFlow(finalisedTreatment.coreTransaction.outRef(0), hospitalAccount))
 
         // the patient needs to cover the difference
-        if (paymentFromInsurerTx.coreTransaction.outRefsOfType<TreatmentState>().isNotEmpty()) {
-            subFlow(PatientFlows.PatientTreatmentPaymentFlow(paymentFromInsurerTx))
-        }
+        subFlow(PatientFlows.PatientTreatmentPaymentFlow(paymentFromInsurerTx, hospitalAccount))
+
         println("Finished TriggerTreatmentPaymentsFlow")
     }
 
     @Suspendable
-    private fun issueTreatmentState(insurer: Party): SignedTransaction {
+    private fun finaliseTreatment(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
+        val treatment = treatmentState.state.data
         val txb = TransactionBuilder(notary).apply {
-            addCommand(Command(TreatmentCommand.IssueTreatment(), listOf(ourIdentity.owningKey)))
-            addOutputState(TreatmentState(treatment, treatmentCost), TreatmentContract.CONTRACT_ID, notary)
+            addCommand(Command(TreatmentCommand.FinaliseTreatment(), listOf(ourIdentity.owningKey)))
+            addInputState(treatmentState)
+            addOutputState(treatmentState.state.copy(data = treatment.let {
+                TreatmentState(
+                        treatment = it.treatment,
+                        estimatedTreatmentCost = it.estimatedTreatmentCost,
+                        treatmentCost = realTreatmentCost,
+                        amountPayed = null,
+                        insurerQuote = it.insurerQuote,
+                        treatmentStatus = TreatmentStatus.FINALISED,
+                        linearId = it.linearId
+                )
+            }))
         }
         val stx = serviceHub.signInitialTransaction(txb)
-
-        return subFlow(FinalityFlow(stx, setOf(insurer)))
+        return subFlow(FinalityFlow(stx))
     }
 }

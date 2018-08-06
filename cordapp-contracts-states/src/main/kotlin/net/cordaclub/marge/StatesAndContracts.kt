@@ -26,50 +26,27 @@ data class TreatmentCoverageEstimation(
         val estimatedAmount: Amount<Currency>
 )
 
-/**
- * The official quote signed by insurers.
- */
-class InsurerQuoteState(
-        val request: TreatmentCoverageEstimation,
+@CordaSerializable
+data class InsurerQuote(
         val insurer: Party,
         val maxCoveredValue: Amount<Currency>
-) : ContractState {
-    override val participants: List<AbstractParty>
-        get() = listOf(request.treatment.hospital, insurer)
-}
+)
 
-sealed class InsurerQuoteCommand : TypeOnlyCommandData() {
-    class IssueQuote : InsurerQuoteCommand()
-    class RedeemQuote : InsurerQuoteCommand()
+@CordaSerializable
+enum class TreatmentStatus{
+    ESTIMATED, QUOTED, FINALISED, PARTIALLY_PAYED, FULLY_PAYED
 }
 
 /**
- * This contract checks the validity of a transaction with a [InsurerQuoteState] output
- */
-class InsurerQuoteContract : Contract {
-    companion object {
-        val CONTRACT_ID: ContractClassName = InsurerQuoteContract::class.qualifiedName!!
-    }
-
-    override fun verify(tx: LedgerTransaction) {
-//        val claimStates = tx.outputsOfType<InsurerQuoteState>()
-        requireThat {
-            // TODO: much more checks can be placed here
-//            "we must have one and only one claim state" using (claimStates.size == 1)
-//            val claimState = claimStates.first()
-//            "that amount being paid out is less than or equal to the claim request" using (claimState.cover <= claimState.request.amount)
-//            "that there are no inputs states" using tx.inputStates.isEmpty()
-        }
-    }
-}
-
-
-/**
- * Once the treatment is over, the hospital issues an official signed state with the treatment.
+ * This is the main state that models a treatment from estimation to payment
  */
 class TreatmentState(
         val treatment: Treatment,
-        val treatmentCost: Amount<Currency>,
+        val estimatedTreatmentCost: Amount<Currency>,
+        val treatmentCost: Amount<Currency>?,
+        val amountPayed: Amount<Currency>?,
+        val insurerQuote: InsurerQuote?,
+        val treatmentStatus: TreatmentStatus,
         override val linearId: UniqueIdentifier = UniqueIdentifier()
 ) : LinearState {
     override val participants: List<AbstractParty>
@@ -81,8 +58,11 @@ class TreatmentState(
 }
 
 sealed class TreatmentCommand : TypeOnlyCommandData() {
-    class IssueTreatment : TreatmentCommand()
-    class PayTreatment : TreatmentCommand()
+    class EstimateTreatment : TreatmentCommand()
+    class QuoteTreatment : TreatmentCommand()
+    class FinaliseTreatment : TreatmentCommand()
+    class CollectInsurerPay : TreatmentCommand()
+    class FullyPayTreatment : TreatmentCommand()
 }
 
 class TreatmentContract : Contract {
