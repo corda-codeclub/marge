@@ -1,15 +1,15 @@
 package net.cordaclub.marge.hospital
 
 import io.cordite.dgl.corda.impl.LedgerApiImpl
+import io.cordite.dgl.corda.token.listAllTokenTypes
 import io.vertx.core.Future
 import net.corda.core.contracts.Amount
 import net.corda.core.node.AppServiceHub
 import net.corda.core.utilities.loggerFor
 import net.corda.finance.GBP
 import net.cordaclub.marge.*
-import net.cordaclub.marge.util.onFail
-import net.cordaclub.marge.util.onSuccess
-import net.cordaclub.marge.util.toEasyFuture
+import net.cordaclub.marge.util.*
+import rx.Observable
 import java.math.BigDecimal
 
 class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
@@ -46,7 +46,8 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
                 HospitalInitialState(
                     serviceHub.myInfo.legalIdentities.first().name.organisation,
                     Patients.allPatients,
-                    balancesString
+                    balancesString,
+                    serviceHub.loadTreatments().map { it.linearId.id.toString() to it }.toMap()
                 )
             }
     }
@@ -74,7 +75,11 @@ class HospitalAPI(private val serviceHub: AppServiceHub) : Initializer(){
         return serviceHub.startFlow(flow).toEasyFuture()
             .map { it.coreTransaction.outputsOfType(TreatmentState::class.java).first() }
     }
+
+    fun listenForTreatments() : Observable<List<TreatmentState>> {
+        return serviceHub.listenForTreatments()
+    }
 }
 
-data class HospitalInitialState(val name: String, val patients: List<Patient>, val balance: String)
+data class HospitalInitialState(val name: String, val patients: List<Patient>, val balance: String, val treatments: Map<String, TreatmentState>)
 data class TreatmentRequest(val name: String, val description: String, val amount: String)

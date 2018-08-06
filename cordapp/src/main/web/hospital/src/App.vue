@@ -2,84 +2,88 @@
 <template>
   <v-app id="app" v-bind:class="{loading: loading}">
     <v-toolbar app>
-      <div class="org-name">{{state.name}}</div>
+      <div class="org-name">{{state.name}} - Treatments</div>
     </v-toolbar>
-    <v-navigation-drawer
-        v-model="drawer"
-        fixed
-        app
-    >
+    <v-navigation-drawer fixed app>
       <div class="display-2">Balance</div>
       <div class="display-1">£ {{state.balance}}</div>
       <v-divider></v-divider>
+      <v-btn color="green lighten-1" dark @click="createTreatment">Create Treatment</v-btn>
     </v-navigation-drawer>
     <v-content>
       <v-container fluid>
-        <v-btn color="red lighten-2" dark @click="createTreatment">Create Treatment</v-btn>
-
-        <div>
-          <div v-cloak>
-            <h2>Patients</h2>
-            <ul>
-              <li v-for="patient in state.patients">
-                <div><span>{{patient.name}}</span></div>
-              </li>
-            </ul>
-          </div>
-          <ul></ul>
-        </div>
-
-        <v-dialog
-            v-model="treatmentDialog"
-            width="800"
-        >
-          <v-card>
-            <v-card-title
-                class="headline grey lighten-2"
-                primary-title
+        <v-card>
+          <v-list two-line>
+            <v-list-tile
+                v-for="(item, key) in treatments"
+                :key="key"
+                avatar
+                @click=""
             >
-              Create Treatment
-            </v-card-title>
-            <v-layout wrap>
-              <v-flex xs12>
-                <v-combobox
-                    v-model="newTreatment.name"
-                    :items="patientNames"
-                    label="Patient"
-                ></v-combobox>
-              </v-flex>
-              <v-flex xs12>
-                <v-text-field
-                    label="Treatment"
-                    placeholder="Enter treatment description"
-                >{{newTreatment.description}}
-                </v-text-field>
-              </v-flex>
-              <v-flex xs12>
-                <v-text-field
-                    v-model="newTreatment.amount"
-                    label="Estimated Amount"
-                ></v-text-field>
-              </v-flex>
-            </v-layout>
+              <v-list-tile-action>
+                <v-icon color="pink">star</v-icon>
+              </v-list-tile-action>
 
-            <v-divider></v-divider>
-
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn
-                  color="primary"
-                  flat
-                  @click="sendTreatment"
-              >
-                Create Treatment
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+              <v-list-tile-content>
+                <v-list-tile-title>{{item.treatment.patient.name}}</v-list-tile-title>
+                <v-list-tile-sub-title>{{item.treatment.description}}</v-list-tile-sub-title>
+                <v-list-tile-sub-title>{{item.treatmentStatus}}</v-list-tile-sub-title>
+              </v-list-tile-content>
+            </v-list-tile>
+          </v-list>
+        </v-card>
       </v-container>
     </v-content>
     <v-footer app></v-footer>
+    <v-dialog
+        v-model="treatmentDialog"
+        width="800"
+    >
+      <v-card>
+        <v-card-title
+            class="headline grey lighten-2"
+            primary-title
+        >
+          Create Treatment
+        </v-card-title>
+        <v-layout wrap>
+          <v-flex xs12>
+            <v-combobox
+                v-model="newTreatment.name"
+                :items="patientNames"
+                label="Patient"
+            ></v-combobox>
+          </v-flex>
+          <v-flex xs12>
+            <v-text-field
+                label="Treatment"
+                placeholder="Enter treatment description"
+                v-model="newTreatment.description"
+            >
+            </v-text-field>
+          </v-flex>
+          <v-flex xs12>
+            <v-text-field
+                v-model="newTreatment.amount"
+                label="Estimated Amount"
+            ></v-text-field>
+          </v-flex>
+        </v-layout>
+
+        <v-divider></v-divider>
+
+        <v-card-actions>
+          <v-btn
+              color="primary"
+              flat
+              @click="sendTreatment"
+          >
+            Create Treatment
+          </v-btn>
+          <v-spacer></v-spacer>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -90,6 +94,7 @@
     name: 'app',
     data: function () {
       return {
+        newStateChange: 1,
         treatmentDialog: false,
         newTreatment: {
           name: "",
@@ -99,7 +104,10 @@
         state: {
           name: '',
           patients: [],
-          balance: "0.00"
+          balance: "0.00",
+          treatments: {
+
+          }
         },
         loading: true
       }
@@ -113,16 +121,22 @@
     computed: {
       patientNames: function () {
         return this.state.patients.map(patient => patient.name)
+      },
+      treatments: function() {
+        if (this.newStateChange > 0) {
+          return this.state.treatments;
+        }
       }
     },
     methods: {
       onOpen() {
         console.log('braid connected', this.proxy);
+        this.proxy.hospital.listenForTreatments(update => this.onTreatments(update), error => this.onTreatmentsError(error), () => {})
         this.proxy.hospital.getInitialState()
           .then(state => {
-            console.log(state.balance);
+            console.log(state);
             this.state = state;
-            this.loading = false
+            this.loading = false;
           })
           .catch(err => console.error("failed to initialise", err))
       },
@@ -145,6 +159,17 @@
           }).catch(err => {
             console.error("failed during sending of treatment", err);
           });
+      },
+      onTreatments(treatments) {
+        treatments.forEach(treatment => {
+          const key = treatment.linearId.id;
+          this.state.treatments[key] = treatment;
+          this.newStateChange += 1;
+        });
+        console.log(treatments);
+      },
+      onTreatmentsError(error) {
+        console.log(error);
       }
     }
   }
