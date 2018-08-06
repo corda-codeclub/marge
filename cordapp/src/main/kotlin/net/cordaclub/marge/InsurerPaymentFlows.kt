@@ -89,7 +89,7 @@ object InsurerFlows {
             // select treatmentCost tokens from the insurer account and pay them to the hospital
             val insurerAccount = subFlow(GetAccountFlow(InsurerAPI.INSURER_ACCOUNT)).state.data
             val inputSigningKeys = TransferTokenSenderFunctions.prepareTokenMoveWithSummary(
-                    txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, insurerPaymentPayload.amountToPay!!.toToken(ourIdentity), serviceHub, ourIdentity, "pay for treatment $treatment")
+                    txb, insurerAccount.address, insurerPaymentPayload.hospitalAccount.address, insurerPaymentPayload.amountToPay!!.toToken(getBank(serviceHub)), serviceHub, ourIdentity, "pay for treatment $treatment")
 
             val stx = serviceHub.signInitialTransaction(txb) // insurer signs the transaction
             val fullySignedTransaction = subFlow(CollectSignaturesFlow(stx, listOf(session)))
