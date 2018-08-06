@@ -3,11 +3,11 @@ package net.cordaclub.marge
 import co.paralleluniverse.fibers.Suspendable
 import io.cordite.dgl.corda.account.AccountAddress
 import io.cordite.dgl.corda.account.GetAccountFlow
+import io.cordite.dgl.corda.token.TokenTransactionSummary
 import io.cordite.dgl.corda.token.TokenType
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions.Companion.prepareTokenMoveWithSummary
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -42,10 +42,10 @@ object InsurerFlows {
 
             val tx = subFlow(object : SignTransactionFlow(insurerSession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val tx = stx.coreTransaction.outputsOfType<TreatmentState>().single()
+                    val treatmentState = stx.coreTransaction.outputsOfType<TreatmentState>().single()
                     stx.verify(serviceHub, checkSufficientSignatures = false)
-                    "The payment is correct." using (tx.amountPayed!! <= tx.treatmentCost!!)
-                    //todo - check that the correct tokens were added
+                    "The payment is correct." using (treatmentState.amountPayed!! <= treatmentState.treatmentCost!!)
+                     "The money was actually payed" using (stx.getTokenSummary().find { it.accountAddress == hospitalAccount }!!.quantity == treatmentState.amountPayed!!.quantity)
                 }
             })
             return waitForLedgerCommit(tx.id)
@@ -110,3 +110,5 @@ fun Amount<Currency>.toToken(issuer: Party): Amount<TokenType.Descriptor> = Amou
         quantity = this.quantity,
         displayTokenSize = this.displayTokenSize,
         token = TokenType.Descriptor(TOKEN_SYMBOL, 2, issuer.name))
+
+fun SignedTransaction.getTokenSummary() = this.coreTransaction.outRefsOfType<TokenTransactionSummary.State>().single().state.data.amounts
