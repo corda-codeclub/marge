@@ -82,6 +82,7 @@ class TreatmentContract : Contract {
                 "The same estimatedTreatmentCost" using (it.estimatedTreatmentCost == outputTreatment.estimatedTreatmentCost)
                 "The same linearId" using (it.linearId == outputTreatment.linearId)
             }
+            "The patient has a correct NINO" using (isCorrectNino(outputTreatment.treatment.patient.nino))
             "The hospital signed the transaction" using (setOfSigners.containsAll(outputTreatment.participants.map { it.owningKey } + inputTreatments.flatMap { it.participants.map { it.owningKey } }))
             when (command.value) {
                 is TreatmentCommand.EstimateTreatment -> {
@@ -118,3 +119,8 @@ class TreatmentContract : Contract {
 
 // Utility
 fun <T : Comparable<T>> min(v1: T, v2: T): T = if (v1 < v2) v1 else v2
+
+fun isCorrectNino(nino: String): Boolean {
+    //todo Yashwinee - see https://stackoverflow.com/questions/10204378/regular-expression-to-validate-uk-national-insurance-number
+    return true
+}

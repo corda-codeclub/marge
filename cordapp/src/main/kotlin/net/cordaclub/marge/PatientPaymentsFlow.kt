@@ -28,10 +28,11 @@ object PatientFlows {
 
             val tx = subFlow(object : SignTransactionFlow(bankSession) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    val tx = stx.coreTransaction.outputsOfType<TreatmentState>().single()
+                    val treatment = stx.coreTransaction.outputsOfType<TreatmentState>().single()
                     stx.verify(serviceHub, checkSufficientSignatures = false)
-                    "The treatment is payed in full." using (tx.amountPayed!! == tx.treatmentCost!!)
-                    //todo - check that the correct tokens were added
+                    "The treatment is payed in full." using (treatment.amountPayed!! == treatment.treatmentCost!!)
+                    val patientAmount = (treatment.treatmentCost!! - treatment.insurerQuote!!.maxCoveredValue).quantity
+                    "The money was actually payed" using (stx.getTokenSummary().find { it.accountAddress == hospitalAccount }!!.quantity == if (patientAmount > 0) patientAmount else 0)
                 }
             })
             return waitForLedgerCommit(tx.id)
