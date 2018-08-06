@@ -10,6 +10,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.util.*
 
@@ -38,6 +39,7 @@ object InsurerQuotingFlows {
             // Create and sign the Treatment State that will be used to justify the redemption of the Quote, and payment from the patient.
             val issueTreatmentTx = estimateTreatmentState()
 
+            sleep(10.seconds)
             // Collect quotes from each insurer and select the best for the committed quote.
             val quotes = insurers.map { insurer ->
                 // set up flow session with the insurer
