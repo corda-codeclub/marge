@@ -63,11 +63,6 @@ fun main(args: Array<String>) {
         hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 1500.POUNDS).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
-
-//        startWebserver(hospital)
-//        startWebserver(insurer1)
-//        startWebserver(insurer2)
-//        startWebserver(bank)
     }
 }
 

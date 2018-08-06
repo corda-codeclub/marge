@@ -5,6 +5,8 @@ import io.cordite.dgl.corda.account.AccountAddress
 import io.cordite.dgl.corda.account.GetAccountFlow
 import io.cordite.dgl.corda.token.flows.TransferTokenSenderFunctions.Companion.prepareTokenMoveWithSummary
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.Requirements.using
+import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -26,8 +28,11 @@ object PatientFlows {
             bankSession.send(hospitalAccount)
 
             val tx = subFlow(object : SignTransactionFlow(bankSession) {
-                override fun checkTransaction(stx: SignedTransaction) {
-                    //all good
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    val tx = stx.coreTransaction.outputsOfType<TreatmentState>().single()
+                    stx.verify(serviceHub, checkSufficientSignatures = false)
+                    "The payment is correct." using (tx.amountPayed!!.quantity == 0L)
+                    //todo - check that the correct tokens were added
                 }
             })
             return waitForLedgerCommit(tx.id)

@@ -122,19 +122,22 @@ object InsurerQuotingFlows {
         @Suspendable
         override fun call(): SignedTransaction? {
             val treatment = session.receive<TreatmentCoverageEstimation>().unwrap { treatmentCost ->
-                // TODO: add security checks to ensure that we can even begin processing this claim
                 requireThat {
+                    //todo - check that the patient is insured by us
                 }
                 treatmentCost // return the claim because we've passed our checks for the payload
             }
 
-            val status = session.sendAndReceive<QuoteStatus>(calculateAmountWeCanPay(treatment)).unwrap { it }
+            val quotedAmount = calculateAmountWeCanPay(treatment)
+            val status = session.sendAndReceive<QuoteStatus>(quotedAmount).unwrap { it }
 
             if (status == QuoteStatus.ACCEPTED_QUOTE) {
                 val signTransactionFlow = object : SignTransactionFlow(session, SignTransactionFlow.tracker()) {
                     override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                        stx.verify(serviceHub, checkSufficientSignatures = false) // verify the transaction - we set checkSufficientSignatures to false because we don't sign until this stage is complete
-//                        "the claim in the proposed output state matches the one we had received" using (stx.tx.outputsOfType<InsurerQuoteState>().first().request == treatment)
+                        val tx = stx.coreTransaction.outputsOfType<TreatmentState>().single()
+                        stx.verify(serviceHub, checkSufficientSignatures = false)
+                        "We sign for the treatment that we were required to quote." using (tx.treatment == treatment.treatment)
+                        "We sign the amount we quoted" using (tx.insurerQuote == InsurerQuote(ourIdentity, quotedAmount))
                     }
                 }
                 // we invoke the sign Transaction flow which in turn awaits the CollectSignaturesFlow above
