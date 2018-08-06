@@ -47,7 +47,7 @@ fun main(args: Array<String>) {
 
         val patient = Patients.allPatients.first()
         val treatment = Treatment(patient, "serious disease", hospital.nodeInfo.legalIdentities.first())
-        val estimation = TreatmentCoverageEstimation(treatment, 1000.POUNDS)
+        val estimation = TreatmentCoverageEstimation(treatment, 100.POUNDS)
 
         val estimationTx = hospital.rpc.startFlow(::RetrieveInsurerQuotesFlow, estimation, insurers.map { it.nodeInfo.legalIdentities.first() }).returnValue.getOrThrow()
         val treatmentState = estimationTx.coreTransaction.outRefsOfType<TreatmentState>()[0]
@@ -60,14 +60,9 @@ fun main(args: Array<String>) {
             println("Consumed: ${vaultUpdate.consumed}")
         }
 
-        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 1500.POUNDS).returnValue.getOrThrow()
+        hospital.rpc.startFlow(::TriggerTreatmentPaymentsFlow, treatmentState, 150.POUNDS).returnValue.getOrThrow()
 
         println("Successfully payed for the treatment.")
-
-//        startWebserver(hospital)
-//        startWebserver(insurer1)
-//        startWebserver(insurer2)
-//        startWebserver(bank)
     }
 }
 

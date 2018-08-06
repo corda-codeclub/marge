@@ -33,7 +33,7 @@ data class InsurerQuote(
 )
 
 @CordaSerializable
-enum class TreatmentStatus{
+enum class TreatmentStatus {
     ESTIMATED, QUOTED, FINALISED, PARTIALLY_PAYED, FULLY_PAYED
 }
 
@@ -71,7 +71,47 @@ class TreatmentContract : Contract {
     }
 
     override fun verify(tx: LedgerTransaction) {
-        //todo
+        val command = tx.commands.requireSingleCommand<TreatmentCommand>()
+        val setOfSigners = command.signers.toSet()
+        val outputTreatment = tx.outputsOfType<TreatmentState>().single()
+        val inputTreatments = tx.inputsOfType<TreatmentState>()
+
+        requireThat {
+            inputTreatments.singleOrNull()?.let {
+                "The same treatment" using (it.treatment == outputTreatment.treatment)
+                "The same estimatedTreatmentCost" using (it.estimatedTreatmentCost == outputTreatment.estimatedTreatmentCost)
+                "The same linearId" using (it.linearId == outputTreatment.linearId)
+            }
+            "The hospital signed the transaction" using (setOfSigners.containsAll(outputTreatment.participants.map { it.owningKey } + inputTreatments.flatMap { it.participants.map { it.owningKey } }))
+            when (command.value) {
+                is TreatmentCommand.EstimateTreatment -> {
+                    "No inputs should be consumed when estimating a treatment." using (inputTreatments.isEmpty())
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.ESTIMATED)
+                }
+                is TreatmentCommand.QuoteTreatment -> {
+                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.ESTIMATED)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.QUOTED)
+                    "The insurer signed the transaction" using (setOfSigners.contains(outputTreatment.insurerQuote!!.insurer.owningKey))
+                    "The estimated value is greater or equal than the quote" using (outputTreatment.estimatedTreatmentCost >= outputTreatment.insurerQuote!!.maxCoveredValue)
+                }
+                is TreatmentCommand.FinaliseTreatment -> {
+                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.QUOTED)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.FINALISED)
+                    "The actual cost of treatment is set" using (outputTreatment.treatmentCost != null)
+                }
+                is TreatmentCommand.CollectInsurerPay -> {
+                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.FINALISED)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.PARTIALLY_PAYED)
+                    "The amount payed is less than the cost" using (outputTreatment.amountPayed!! <= outputTreatment.treatmentCost!!)
+                    "The amount payed is correct" using (outputTreatment.amountPayed!! == min(outputTreatment.insurerQuote!!.maxCoveredValue, outputTreatment.treatmentCost))
+                }
+                is TreatmentCommand.FullyPayTreatment -> {
+                    "The input status is correct" using (inputTreatments.single().treatmentStatus == TreatmentStatus.PARTIALLY_PAYED)
+                    "The output status is correct" using (outputTreatment.treatmentStatus == TreatmentStatus.FULLY_PAYED)
+                    "There is nothing left to pay" using (outputTreatment.amountPayed!! == outputTreatment.treatmentCost!!)
+                }
+            }
+        }
     }
 }
 

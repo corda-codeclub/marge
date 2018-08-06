@@ -18,8 +18,8 @@ import java.util.*
  * Second Flow!
  * This is run by the Hospital when the treatment is over.
  *
- * 1) It will evolve the TreatmentSate
- * 2) It will requests payments from the insurer and patient
+ * 1) It will transition the TreatmentState to the Finalized status.
+ * 2) It will requests payments from the insurer and patient.
  */
 @StartableByRPC
 @StartableByService
@@ -28,9 +28,8 @@ class TriggerTreatmentPaymentsFlow(private val treatmentState: StateAndRef<Treat
     @Suspendable
     override fun call() {
 
-        //todo check the state
         val finalisedTreatment = finaliseTreatment()
-        val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data
+        val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data.address
 
         val paymentFromInsurerTx = subFlow(InsurerFlows.InsurerTreatmentPaymentFlow(finalisedTreatment.coreTransaction.outRef(0), hospitalAccount))
 
@@ -43,11 +42,10 @@ class TriggerTreatmentPaymentsFlow(private val treatmentState: StateAndRef<Treat
     @Suspendable
     private fun finaliseTreatment(): SignedTransaction {
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-        val treatment = treatmentState.state.data
         val txb = TransactionBuilder(notary).apply {
             addCommand(Command(TreatmentCommand.FinaliseTreatment(), listOf(ourIdentity.owningKey)))
             addInputState(treatmentState)
-            addOutputState(treatmentState.state.copy(data = treatment.let {
+            addOutputState(treatmentState.state.copy(data = treatmentState.state.data.let {
                 TreatmentState(
                         treatment = it.treatment,
                         estimatedTreatmentCost = it.estimatedTreatmentCost,
