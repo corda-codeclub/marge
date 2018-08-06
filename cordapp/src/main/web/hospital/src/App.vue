@@ -31,7 +31,7 @@
                 </v-list-tile-content>
               </v-list-tile>
               <v-list-tile v-if="item.treatmentStatus=='QUOTED'">
-                <v-btn color="blue lighten-1" dark @click="requestPayment">Request Payment</v-btn>
+                <v-btn color="blue lighten-1" dark @click="requestPayment(key)">Request Payment</v-btn>
               </v-list-tile>
               <v-divider></v-divider>
             </template>
@@ -175,6 +175,16 @@
       },
       onTreatmentsError(error) {
         console.log(error);
+      },
+      requestPayment(id) {
+        console.log("requesting payment for", id);
+        this.proxy.hospital.requestPayment(id)
+          .then(result => {
+            console.log("paid!"); // we'll get the notification later
+          })
+          .catch(err => {
+            console.error("failed to be paid");
+          });
       }
     }
   }
