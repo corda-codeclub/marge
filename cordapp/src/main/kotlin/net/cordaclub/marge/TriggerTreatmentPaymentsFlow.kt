@@ -11,6 +11,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StartableByService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.seconds
 import net.cordaclub.marge.hospital.HospitalAPI
 import java.util.*
 
@@ -29,9 +30,13 @@ class TriggerTreatmentPaymentsFlow(private val treatmentState: StateAndRef<Treat
     override fun call() {
 
         val finalisedTreatment = finaliseTreatment()
+        sleep(10.seconds)
+
         val hospitalAccount = subFlow(GetAccountFlow(HospitalAPI.HOSPITAL_ACCOUNT)).state.data.address
 
         val paymentFromInsurerTx = subFlow(InsurerFlows.InsurerTreatmentPaymentFlow(finalisedTreatment.coreTransaction.outRef(0), hospitalAccount))
+
+        sleep(10.seconds)
 
         // the patient needs to cover the difference
         subFlow(PatientFlows.PatientTreatmentPaymentFlow(paymentFromInsurerTx, hospitalAccount))

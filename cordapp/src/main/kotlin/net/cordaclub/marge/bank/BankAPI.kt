@@ -85,16 +85,17 @@ class BankAPI(private val serviceHub: AppServiceHub, private val patients: List<
                     // transfer funds to the insurers
                     hospitals.fold(Future.succeededFuture<Unit>()) { acc, hospital ->
                         val hospitalAccount = AccountAddress(HospitalAPI.HOSPITAL_ACCOUNT, hospital).toString()
-                        acc.compose {
-                            ledger.transferToken(
-                                "500000.00",
-                                TOKEN_TYPE_URI,
-                                BANK_ISSUANCE_ACCOUNT,
-                                hospitalAccount,
-                                "there you go",
-                                notary.name
-                            ).mapEmpty<Unit>()
-                        }
+//                        acc.compose {
+//                            ledger.transferToken(
+//                                "0.00",
+//                                TOKEN_TYPE_URI,
+//                                BANK_ISSUANCE_ACCOUNT,
+//                                hospitalAccount,
+//                                "there you go",
+//                                notary.name
+//                            ).mapEmpty<Unit>()
+//                        }
+                        Future.succeededFuture()
                     }
                 }
                 .onSuccess {
